@@ -26,24 +26,23 @@ def compute_all_metrics(
     y_pred: np.ndarray,
     y_prob: np.ndarray,
 ) -> dict:
+    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+
     return {
         "accuracy": round(
-            (y_true == y_pred).mean(), 4
+            accuracy_score(y_true, y_pred), 4
         ),
         "precision": round(
-            pd.Series(y_pred)[y_true == 1].mean() if (y_true == 1).sum() > 0 else 0, 4
+            precision_score(y_true, y_pred, zero_division=0), 4
         ),
         "recall": round(
-            (y_pred[y_true == 1] == 1).sum() / max((y_true == 1).sum(), 1), 4
+            recall_score(y_true, y_pred, zero_division=0), 4
         ),
         "f1": round(
-            2
-            * (y_pred[y_true == 1] == 1).sum()
-            / max((y_pred == 1).sum() + (y_true == 1).sum(), 1),
-            4,
+            f1_score(y_true, y_pred, zero_division=0), 4
         ),
         "roc_auc": round(
-            __import__("sklearn.metrics").metrics.roc_auc_score(y_true, y_prob), 4
+            roc_auc_score(y_true, y_prob), 4
         ),
     }
 

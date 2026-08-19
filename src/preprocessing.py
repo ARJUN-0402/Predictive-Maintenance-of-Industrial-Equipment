@@ -15,12 +15,13 @@ from src.config import (
     TARGET_COLUMN,
     TRAIN_DATA_PATH,
     TEST_DATA_PATH,
+    DROP_COLUMNS,
 )
 from src.utils import setup_logging
 
-logger = setup_logging("preprocessing")
+logger = setup_logging("preprocessor")
 
-NUMERIC_FEATURES_ONLY = [
+NUMERIC_FEATURES = [
     "Air temperature [K]",
     "Process temperature [K]",
     "Rotational speed [rpm]",
@@ -36,6 +37,15 @@ NUMERIC_FEATURES_ONLY = [
 CATEGORICAL_FEATURES = ["Type_L", "Type_M", "Type_H"]
 
 
+def clean_feature_names(names: list[str]) -> list[str]:
+    """Clean feature names to be XGBoost-compatible (no brackets, <, >)."""
+    cleaned = []
+    for name in names:
+        n = name.replace("[", "").replace("]", "").replace("<", "").replace(">", "")
+        cleaned.append(n)
+    return cleaned
+
+
 def build_preprocessing_pipeline() -> ColumnTransformer:
     numeric_transformer = Pipeline(
         steps=[
@@ -46,7 +56,7 @@ def build_preprocessing_pipeline() -> ColumnTransformer:
 
     preprocessor = ColumnTransformer(
         transformers=[
-            ("num", numeric_transformer, NUMERIC_FEATURES_ONLY),
+            ("num", numeric_transformer, NUMERIC_FEATURES),
         ],
         remainder="passthrough",
         verbose_feature_names_out=False,
@@ -61,7 +71,7 @@ def preprocess_data(
     fit: bool = True,
 ) -> tuple[pd.DataFrame, pd.Series, ColumnTransformer]:
     df = df.drop_duplicates()
-    df = df.drop(columns=["UDI"], errors="ignore")
+    df = df.drop(columns=DROP_COLUMNS, errors="ignore")
 
     df["Type"] = df["Type"].astype(str)
     type_dummies = pd.get_dummies(df["Type"], prefix="Type", dtype=int)
@@ -72,25 +82,25 @@ def preprocess_data(
     df = df.drop(columns=["Type"])
 
     target = df[TARGET_COLUMN]
-    feature_cols = [c for c in FEATURE_COLUMNS if c not in (TARGET_COLUMN, "Type")]
+    feature_cols = [c for c in FEATURE_COLUMNS if c not in (TARGET_COLUMN)]
     X = df[feature_cols]
 
     if preprocessor is None:
         preprocessor = build_preprocessing_pipeline()
-        X_transformed = preprocessor.fit_transform(X)
-    else:
-        X_transformed = preprocessor.transform(X)
 
-    if preprocessor is None:
-        preprocessor = build_preprocessing_pipeline()
+    if fit:
         X_transformed = preprocessor.fit_transform(X)
     else:
         X_transformed = preprocessor.transform(X)
 
     if isinstance(X_transformed, pd.DataFrame):
-        X_processed = X_transformed
+        feature_names = clean_feature_names(list(X_transformed.columns))
+        X_processed = X_transformed.copy()
+        X_processed.columns = feature_names
     else:
-        feature_names = list(preprocessor.get_feature_names_out())
+        feature_names = clean_feature_names(
+            list(preprocessor.get_feature_names_out())
+        )
         X_processed = pd.DataFrame(
             X_transformed, columns=feature_names, index=X.index
         )

@@ -12,6 +12,7 @@ from src.config import (
     SCALER_PATH,
     XGBoost_MODEL_PATH,
 )
+from src.feature_engineering import engineer_features
 from src.utils import setup_logging
 
 logger = setup_logging("predict")
@@ -53,6 +54,9 @@ def predict(
     model, preprocessor = load_model(model_path, scaler_path)
     df = prepare_input_df(input_data)
 
+    # Engineer features (must match training pipeline)
+    df = engineer_features(df)
+
     if "Type" in df.columns:
         type_dummies = pd.get_dummies(df["Type"], prefix="Type", dtype=int)
         for col in ["Type_L", "Type_M", "Type_H"]:
@@ -66,6 +70,19 @@ def predict(
     X = df[available]
 
     X_scaled = preprocessor.transform(X)
+
+    # Clean feature names to match XGBoost model expectations
+    # The preprocessor may produce columns with original names;
+    # ensure they match the booster's expected feature names
+    booster = model.get_booster()
+    expected_features = booster.feature_names
+    current_features = list(X_scaled.columns)
+
+    if current_features != expected_features:
+        # Rename columns to match the model's expected feature names
+        rename_dict = dict(zip(current_features, expected_features))
+        X_scaled = X_scaled.rename(columns=rename_dict)
+
     y_prob = model.predict_proba(X_scaled)[:, 1]
     y_pred = (y_prob >= threshold).astype(int)
 

@@ -29,7 +29,11 @@ from src.config import (
     XGBoost_PARAMS,
     XGBoost_EVAL_METRIC,
     XGBoost_N_JOBS,
-    XGBoost_USE_LABEL_ENCODER,
+    XGBoost_MODEL_PATH,
+    TARGET_COLUMN,
+    FEATURE_COLUMNS,
+    NUMERIC_FEATURES,
+    DROP_COLUMNS,
 )
 from src.data_loader import load_dataset
 from src.feature_engineering import engineer_features
@@ -44,7 +48,6 @@ def train_xgboost(X_train: pd.DataFrame, y_train: pd.Series) -> tuple:
     xgb = XGBClassifier(
         random_state=RANDOM_SEED,
         eval_metric=XGBoost_EVAL_METRIC,
-        use_label_encoder=XGBoost_USE_LABEL_ENCODER,
         n_jobs=XGBoost_N_JOBS,
     )
     grid_search = GridSearchCV(
@@ -112,6 +115,9 @@ def save_model_registry(
     model_name: str,
     best_params: dict,
     metrics: dict,
+    dataset_info: dict | None = None,
+    feature_config: dict | None = None,
+    threshold: float | None = None,
 ) -> None:
     MODEL_REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
     registry: dict = {}
@@ -127,6 +133,13 @@ def save_model_registry(
         "best_params": best_params,
         "metrics": metrics,
     }
+    if dataset_info is not None:
+        entry["dataset_info"] = dataset_info
+    if feature_config is not None:
+        entry["feature_config"] = feature_config
+    if threshold is not None:
+        entry["threshold"] = threshold
+
     registry[version] = entry
 
     with open(MODEL_REGISTRY_PATH, "w") as f:
@@ -166,6 +179,24 @@ def train_all_models() -> dict:
 
     save_processed_data(X_train_proc, y_train_proc, X_test_proc, y_test_proc, preprocessor)
 
+    # Collect dataset info
+    dataset_info = {
+        "rows": len(df),
+        "columns": list(df.columns),
+        "class_balance": y.value_counts().to_dict(),
+        "target_column": TARGET_COLUMN,
+        "test_size": TEST_SIZE,
+        "random_seed": RANDOM_SEED,
+    }
+
+    # Collect feature config
+    feature_config = {
+        "feature_columns": FEATURE_COLUMNS,
+        "numeric_features": NUMERIC_FEATURES,
+        "categorical_features": ["Type_L", "Type_M", "Type_H"],
+        "drop_columns": DROP_COLUMNS,
+    }
+
     models: dict = {}
     metrics_results: dict = {}
 
@@ -176,7 +207,11 @@ def train_all_models() -> dict:
     xgb_metrics = compute_metrics(y_test_proc, xgb_pred, xgb_prob)
     models["xgboost"] = xgb_model
     metrics_results["xgboost"] = xgb_metrics
-    save_model_registry("xgboost", xgb_params, xgb_metrics)
+    save_model_registry(
+        "xgboost", xgb_params, xgb_metrics,
+        dataset_info=dataset_info,
+        feature_config=feature_config,
+    )
     logger.info("XGBoost metrics: %s", xgb_metrics)
 
     logger.info("Training Random Forest...")
@@ -186,7 +221,11 @@ def train_all_models() -> dict:
     rf_metrics = compute_metrics(y_test_proc, rf_pred, rf_prob)
     models["random_forest"] = rf_model
     metrics_results["random_forest"] = rf_metrics
-    save_model_registry("random_forest", {"n_estimators": 200, "class_weight": "balanced"}, rf_metrics)
+    save_model_registry(
+        "random_forest", {"n_estimators": 200, "class_weight": "balanced"}, rf_metrics,
+        dataset_info=dataset_info,
+        feature_config=feature_config,
+    )
     logger.info("Random Forest metrics: %s", rf_metrics)
 
     logger.info("Training Gradient Boosting...")
@@ -196,7 +235,11 @@ def train_all_models() -> dict:
     gb_metrics = compute_metrics(y_test_proc, gb_pred, gb_prob)
     models["gradient_boosting"] = gb_model
     metrics_results["gradient_boosting"] = gb_metrics
-    save_model_registry("gradient_boosting", {"n_estimators": 200}, gb_metrics)
+    save_model_registry(
+        "gradient_boosting", {"n_estimators": 200}, gb_metrics,
+        dataset_info=dataset_info,
+        feature_config=feature_config,
+    )
     logger.info("Gradient Boosting metrics: %s", gb_metrics)
 
     logger.info("Training Logistic Regression...")
@@ -206,7 +249,11 @@ def train_all_models() -> dict:
     lr_metrics = compute_metrics(y_test_proc, lr_pred, lr_prob)
     models["logistic_regression"] = lr_model
     metrics_results["logistic_regression"] = lr_metrics
-    save_model_registry("logistic_regression", {"class_weight": "balanced"}, lr_metrics)
+    save_model_registry(
+        "logistic_regression", {"class_weight": "balanced"}, lr_metrics,
+        dataset_info=dataset_info,
+        feature_config=feature_config,
+    )
     logger.info("Logistic Regression metrics: %s", lr_metrics)
 
     joblib.dump(models["xgboost"], str(XGBoost_MODEL_PATH))
@@ -218,6 +265,8 @@ def train_all_models() -> dict:
         "X_test": X_test_proc,
         "y_test": y_test_proc,
         "preprocessor": preprocessor,
+        "dataset_info": dataset_info,
+        "feature_config": feature_config,
     }
 
 

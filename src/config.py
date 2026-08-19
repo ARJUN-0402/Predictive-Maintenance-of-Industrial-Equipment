@@ -77,7 +77,6 @@ XGBoost_PARAMS = {
 }
 
 XGBoost_N_JOBS = -1
-XGBoost_USE_LABEL_ENCODER = False
 XGBoost_EVAL_METRIC = "logloss"
 
 TEST_SIZE = 0.2
