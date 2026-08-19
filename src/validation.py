@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 import pandas as pd
 
@@ -8,7 +7,6 @@ from src.config import (
     TARGET_COLUMN,
     DROP_COLUMNS,
     FEATURE_COLUMNS,
-    NUMERIC_FEATURES,
 )
 
 logger = logging.getLogger("validation")
@@ -74,7 +72,6 @@ def validate_data_types(df: pd.DataFrame) -> None:
         if col not in df.columns:
             continue
         actual_type = df[col].dtype
-        # Check if the type is compatible
         if expected_type == int:
             if not pd.api.types.is_integer_dtype(actual_type):
                 try:
@@ -213,7 +210,6 @@ def validate_target_leakage(df: pd.DataFrame, feature_columns: list[str] | None 
     leakage_cols = ["TWF", "HDF", "PWF", "OSF", "RNF"]
     feat_cols = set(feature_columns) if feature_columns else set()
 
-    # Check if any leakage columns are in the feature set
     leakage_in_features = set(leakage_cols) & feat_cols
     if leakage_in_features:
         raise ValidationError(
@@ -222,7 +218,6 @@ def validate_target_leakage(df: pd.DataFrame, feature_columns: list[str] | None 
             f"They will be dropped during preprocessing."
         )
 
-    # Also check raw DataFrame columns that could leak through
     for col in leakage_cols:
         if col in df.columns and col not in feat_cols:
             logger.info(
@@ -238,8 +233,6 @@ def validate_feature_columns(df: pd.DataFrame, feature_columns: list[str]) -> No
 
     Also checks that target column and dropped columns are not in the feature list.
     """
-    from src.config import TARGET_COLUMN
-
     missing = set(feature_columns) - set(df.columns)
     if missing:
         raise ValidationError(f"Missing feature columns: {sorted(missing)}")
@@ -254,7 +247,7 @@ def validate_feature_columns(df: pd.DataFrame, feature_columns: list[str]) -> No
     logger.info("Feature column validation passed: %d features", len(feature_columns))
 
 
-def validate_dataset(df: pd.DataFrame, check_feature_columns: bool = False, skip_schema: bool = False) -> None:
+def validate_dataset(df: pd.DataFrame, check_feature_columns: bool = False, skip_schema: bool = False) -> None:  # noqa: E501
     """Run all validation checks on a dataset.
 
     Args:

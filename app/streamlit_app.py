@@ -8,29 +8,19 @@ import streamlit as st
 from sklearn.metrics import f1_score
 
 from src.config import (
-    FEATURE_COLUMNS,
-    MODELS_DIR,
-    PROCESSED_DATA_PATH,
-    RAW_DATA_DIR,
     RESULTS_DIR,
     TARGET_COLUMN,
     XGBoost_MODEL_PATH,
 )
 from src.data_loader import load_dataset
-from src.evaluate import (
-    compute_all_metrics,
-)
 from src.explain import (
     get_shap_explainer,
     lime_explain,
-    shap_bar_plot,
     shap_dependence_plots,
     shap_force_plot_html,
-    shap_summary_plot,
     shap_waterfall_plot,
     get_top_features_shap,
 )
-from src.feature_engineering import engineer_features
 from src.predict import batch_predict, predict
 from src.preprocessing import load_processed_data
 from src.train import train_all_models
@@ -43,8 +33,10 @@ def _get_css() -> str:
     return """
 <style>
     .stApp { background-color: #0e1117; }
-    .stMetric, .stCard { background-color: #1c1e26; border-radius: 12px; padding: 16px; margin: 8px; }
-    .stButton>button { background-color: #00d4ff; color: #0e1117; border: none; border-radius: 8px; font-weight: bold; }
+    .stMetric, .stCard { background-color: #1c1e26; border-radius: 12px;
+    padding: 16px; margin: 8px; }
+    .stButton>button { background-color: #00d4ff; color: #0e1117;
+    border: none; border-radius: 8px; font-weight: bold; }
     .stSlider>div>div { background-color: #00d4ff; }
     .block-container { padding-top: 1rem; }
     h1, h2, h3 { color: #00d4ff; }
@@ -322,7 +314,7 @@ def page_predict_failure() -> None:
             torque_norm = torque / (rpm + 1e-6)
             temp_wear_inter = temp_diff * tool_wear
 
-        st.markdown(f"**Derived Features:**")
+        st.markdown("**Derived Features:**")
         st.write(f"Temperature Diff: {temp_diff:.2f} K | Power: {power:.2f} W")
         st.write(f"Wear Rate: {wear_rate:.6f} | Torque Normalized: {torque_norm:.6f}")
         st.write(f"Temp-Wear Interaction: {temp_wear_inter:.2f}")
@@ -338,7 +330,7 @@ def page_predict_failure() -> None:
             }
             try:
                 result = predict(input_dict, threshold=threshold)
-                _display_prediction_card(result)
+                _display_prediction_card(result, threshold)
             except Exception as exc:
                 st.error(f"Prediction failed: {exc}")
                 logger.error("Prediction error: %s", exc)
@@ -347,7 +339,11 @@ def page_predict_failure() -> None:
         st.markdown("#### Batch Prediction from CSV")
         uploaded_file = st.file_uploader(
             "Upload CSV file", type=["csv"],
-            help="CSV must contain columns: Air temperature [K], Process temperature [K], Rotational speed [rpm], Torque [Nm], Tool wear [min], Type"
+            help=(
+                "CSV must contain columns: Air temperature [K], "
+                "Process temperature [K], Rotational speed [rpm], "
+                "Torque [Nm], Tool wear [min], Type"
+            ),
         )
         if uploaded_file is not None:
             try:
@@ -375,7 +371,7 @@ def page_predict_failure() -> None:
                 logger.error("Batch prediction error: %s", exc)
 
 
-def _display_prediction_card(result: dict) -> None:
+def _display_prediction_card(result: dict, threshold: float) -> None:
     pred = result["prediction"]
     prob = result["probability"]
     risk = result["risk_level"]
@@ -384,7 +380,8 @@ def _display_prediction_card(result: dict) -> None:
     color = "#ff4b4b" if pred == 1 else "#00c853"
 
     st.markdown(f"""
-    <div style="background:#1c1e26;border-radius:12px;padding:20px;margin:10px 0;border-left:5px solid {color};">
+    <div style="background:#1c1e26;border-radius:12px;padding:20px;margin:10px 0;
+    border-left:5px solid {color};">
         <h2 style="color:{color};margin:0;">Prediction: {label}</h2>
     </div>
     """, unsafe_allow_html=True)
@@ -457,7 +454,10 @@ def page_explain_prediction() -> None:
         if model is None or X_test is None:
             st.warning("Model or test data not available for LIME.")
         else:
-            lime_result = lime_explain(model, X_test, X_test, idx=st.session_state.get("selected_idx", 0))
+            lime_result = lime_explain(
+                model, X_test, X_test,
+                idx=st.session_state.get("selected_idx", 0)
+            )
             if lime_result:
                 lime_df = pd.DataFrame(
                     list(lime_result.items()), columns=["Feature", "Contribution"]
@@ -511,7 +511,6 @@ def page_performance_metrics() -> None:
             st.markdown(card_html("ROC-AUC", f"{metrics.get('roc_auc', 0):.4f}", "#00c853"))
 
     y_test = st.session_state.y_test
-    y_pred = st.session_state.models.get(model_name).predict(st.session_state.X_test)
     y_prob = st.session_state.models.get(model_name).predict_proba(st.session_state.X_test)[:, 1]
 
     cm_path = RESULTS_DIR / f"confusion_matrix_{model_name}.png"
@@ -554,7 +553,7 @@ def page_download_reports() -> None:
             sections = [
                 {
                     "heading": "Model Summary",
-                    "lines": [f"Primary Model: XGBoost", f"Random Seed: 42"],
+                    "lines": ["Primary Model: XGBoost", "Random Seed: 42"],
                 },
                 {
                     "heading": "Metrics",

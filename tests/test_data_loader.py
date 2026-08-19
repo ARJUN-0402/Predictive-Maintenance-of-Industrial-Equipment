@@ -1,7 +1,12 @@
-import pytest
 import pandas as pd
-from src.data_loader import load_dataset, download_dataset
-from src.validation import validate_schema, validate_data_types, validate_missing_values, validate_duplicate_rows, validate_target_leakage, validate_dataset
+from src.data_loader import load_dataset
+from src.validation import (
+    validate_duplicate_rows,
+    validate_dataset,
+    validate_missing_values,
+    validate_schema,
+    validate_target_leakage,
+)
 
 
 class TestDataLoader:

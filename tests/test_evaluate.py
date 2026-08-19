@@ -1,4 +1,3 @@
-import pytest
 import pandas as pd
 import numpy as np
 from src.train import train_all_models
@@ -71,7 +70,32 @@ class TestThresholdOptimization:
         assert "best_recall" in result
         assert "best_precision" in result
 
-    def test_recommend_threshold_for_recall(self):
+    def test_optimize_threshold_synthetic_analysis(self):
+        from src.threshold_optimization import optimize_threshold
+
+        rng = np.random.default_rng(0)
+        y_true = pd.Series(rng.integers(0, 2, size=200))
+        y_prob = rng.uniform(0.05, 0.95, size=200)
+
+        result = optimize_threshold(y_true, y_prob, threshold_range=(0.05, 0.95), step=0.05)
+        assert "best_threshold" in result
+        assert "best_f1" in result
+        assert "best_precision" in result
+        assert "best_recall" in result
+        assert "threshold_data" in result
+
+        data = result["threshold_data"]
+        for col in ("threshold", "precision", "recall", "f1", "false_negatives"):
+            assert col in data.columns
+
+        # Best F1 reported must equal the maximum F1 across all evaluated thresholds
+        assert abs(float(data["f1"].max()) - result["best_f1"]) < 1e-9
+
+        # Threshold analysis must contain F1, Precision and Recall traces (per-threshold)
+        assert len(data) > 1
+        assert data["f1"].between(0.0, 1.0).all()
+        assert data["precision"].between(0.0, 1.0).all()
+        assert data["recall"].between(0.0, 1.0).all()
         import warnings
         warnings.filterwarnings("ignore")
         from src.threshold_optimization import recommend_threshold_for_recall

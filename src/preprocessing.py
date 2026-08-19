@@ -1,5 +1,4 @@
-import logging
-from pathlib import Path
+import joblib
 
 import pandas as pd
 from sklearn.compose import ColumnTransformer
@@ -19,22 +18,9 @@ from src.config import (
 )
 from src.utils import setup_logging
 
-logger = setup_logging("preprocessor")
-
-NUMERIC_FEATURES = [
-    "Air temperature [K]",
-    "Process temperature [K]",
-    "Rotational speed [rpm]",
-    "Torque [Nm]",
-    "Tool wear [min]",
-    "temperature_diff",
-    "power",
-    "wear_rate",
-    "torque_normalized",
-    "temp_wear_interaction",
-]
-
 CATEGORICAL_FEATURES = ["Type_L", "Type_M", "Type_H"]
+
+logger = setup_logging("preprocessor")
 
 
 def clean_feature_names(names: list[str]) -> list[str]:
@@ -124,8 +110,6 @@ def save_processed_data(
     train_df.to_parquet(TRAIN_DATA_PATH, index=False)
     test_df.to_parquet(TEST_DATA_PATH, index=False)
     logger.info("Saved processed data to %s", PROCESSED_DATA_DIR)
-
-    import joblib
 
     joblib.dump(preprocessor, str(SCALER_PATH))
     logger.info("Saved preprocessor to %s", SCALER_PATH)

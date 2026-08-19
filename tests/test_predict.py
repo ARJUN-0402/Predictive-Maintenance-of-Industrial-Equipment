@@ -1,7 +1,53 @@
 import pandas as pd
+from pathlib import Path
 import pytest
 
-from src.predict import predict, batch_predict
+from src.predict import predict, batch_predict, _classify_risk
+
+
+def test_classify_risk_high() -> None:
+    assert _classify_risk(0.95, threshold=0.5) == "High"
+    assert _classify_risk(0.701, threshold=0.5) == "High"
+
+
+def test_classify_risk_medium() -> None:
+    assert _classify_risk(0.5, threshold=0.5) == "Medium"
+    assert _classify_risk(0.3, threshold=0.5) == "Medium"
+
+
+def test_classify_risk_low() -> None:
+    assert _classify_risk(0.1, threshold=0.5) == "Low"
+    assert _classify_risk(0.299, threshold=0.5) == "Low"
+
+
+def test_classify_risk_not_hardcoded_low() -> None:
+    levels = {
+        _classify_risk(p, threshold=0.5)
+        for p in [0.05, 0.4, 0.55, 0.8, 0.99]
+    }
+    assert levels == {"Low", "Medium", "High"}
+
+
+def test_predict_risk_level_derived_not_hardcoded(normal_sample: dict) -> None:
+    try:
+        result = predict(normal_sample, threshold=0.5)
+    except FileNotFoundError:
+        pytest.skip("Model file not found; skipping prediction test")
+    assert result["risk_level"] in ("Low", "Medium", "High")
+    assert result["risk_level"] == _classify_risk(
+        result["probability"], threshold=0.5
+    )
+
+
+def test_predict_risk_level_matches_classifier(failure_sample: dict) -> None:
+    try:
+        result = predict(failure_sample, threshold=0.5)
+    except FileNotFoundError:
+        pytest.skip("Model file not found; skipping prediction test")
+    assert result["risk_level"] == _classify_risk(
+        result["probability"], threshold=0.5
+    )
+    assert result["risk_level"] != "Low" or result["probability"] < 0.3
 
 
 @pytest.fixture

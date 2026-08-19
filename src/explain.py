@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 import numpy as np
@@ -6,7 +5,6 @@ import pandas as pd
 import shap
 
 from src.config import RANDOM_SEED
-from src.predict import load_model
 from src.utils import setup_logging
 
 logger = setup_logging("explain")
@@ -243,7 +241,6 @@ def explain_prediction_plain_english(
             else:
                 feat_imp = pd.Series(shap_mean, index=list(X.columns))
             top_features = feat_imp.sort_values(ascending=False).head(3).index.tolist()
-            top_vals = feat_imp.sort_values(ascending=False).head(3).values.tolist()
         except (NotImplementedError, Exception):
             return "Unable to generate explanation at this time."
 

@@ -1,6 +1,5 @@
 import json
-import logging
-from pathlib import Path
+import logging  # noqa: F401 (used indirectly via setup_logging)
 from datetime import datetime
 
 import joblib
@@ -24,16 +23,15 @@ from xgboost import XGBClassifier
 from src.config import (
     MODEL_REGISTRY_PATH,
     RANDOM_SEED,
-    SCALER_PATH,
     TEST_SIZE,
     XGBoost_PARAMS,
     XGBoost_EVAL_METRIC,
     XGBoost_N_JOBS,
-    XGBoost_MODEL_PATH,
     TARGET_COLUMN,
     FEATURE_COLUMNS,
     NUMERIC_FEATURES,
     DROP_COLUMNS,
+    XGBoost_MODEL_PATH,
 )
 from src.data_loader import load_dataset
 from src.feature_engineering import engineer_features
@@ -78,7 +76,7 @@ def train_random_forest(X_train: pd.DataFrame, y_train: pd.Series) -> RandomFore
     return model
 
 
-def train_gradient_boosting(X_train: pd.DataFrame, y_train: pd.Series) -> GradientBoostingClassifier:
+def train_gradient_boosting(X_train: pd.DataFrame, y_train: pd.Series) -> GradientBoostingClassifier:  # noqa: E501
     logger.info("Training Gradient Boosting...")
     model = GradientBoostingClassifier(
         n_estimators=200,
@@ -88,7 +86,7 @@ def train_gradient_boosting(X_train: pd.DataFrame, y_train: pd.Series) -> Gradie
     return model
 
 
-def train_logistic_regression(X_train: pd.DataFrame, y_train: pd.Series) -> LogisticRegression:
+def train_logistic_regression(X_train: pd.DataFrame, y_train: pd.Series) -> LogisticRegression:  # noqa: E501
     logger.info("Training Logistic Regression...")
     model = LogisticRegression(
         class_weight="balanced",
@@ -126,7 +124,7 @@ def save_model_registry(
             registry = json.load(f)
 
     version = f"v{len(registry) + 1}"
-    entry = {
+    entry: dict[str, object] = {
         "version": version,
         "timestamp": datetime.now().isoformat(),
         "model": model_name,
@@ -155,7 +153,7 @@ def train_all_models() -> dict:
     df = engineer_features(df)
 
     logger.info("Splitting data...")
-    feature_cols = [c for c in df.columns if c not in ("Machine failure", "UDI", "TWF", "HDF", "PWF", "OSF", "RNF")]
+    feature_cols = [c for c in df.columns if c not in ("Machine failure", "UDI", "TWF", "HDF", "PWF", "OSF", "RNF")]  # noqa: E501
     X = df[feature_cols]
     y = df["Machine failure"]
 
@@ -179,7 +177,6 @@ def train_all_models() -> dict:
 
     save_processed_data(X_train_proc, y_train_proc, X_test_proc, y_test_proc, preprocessor)
 
-    # Collect dataset info
     dataset_info = {
         "rows": len(df),
         "columns": list(df.columns),
@@ -189,7 +186,6 @@ def train_all_models() -> dict:
         "random_seed": RANDOM_SEED,
     }
 
-    # Collect feature config
     feature_config = {
         "feature_columns": FEATURE_COLUMNS,
         "numeric_features": NUMERIC_FEATURES,

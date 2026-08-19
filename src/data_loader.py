@@ -1,4 +1,3 @@
-import logging
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -13,6 +12,7 @@ from src.config import (
     RAW_DATA_DIR,
 )
 from src.utils import setup_logging, validate_columns
+
 
 logger = setup_logging("data_loader")
 
@@ -38,7 +38,7 @@ def download_dataset(url: str, dest_dir: Path) -> Path:
         logger.info("Extracted dataset to %s", dest_dir)
     except Exception as exc:
         logger.error("Failed to extract dataset: %s", exc)
-        raise RuntimeError(f"Failed to extract dataset archive") from exc
+        raise RuntimeError("Failed to extract dataset archive") from exc
     if not csv_path.exists():
         extracted_files = list(dest_dir.glob("*.csv"))
         if extracted_files:

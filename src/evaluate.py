@@ -1,17 +1,19 @@
-import logging
 from pathlib import Path
+from typing import Any
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
 from sklearn.metrics import (
+    accuracy_score,
     classification_report,
     confusion_matrix,
+    f1_score,
     precision_recall_curve,
+    precision_score,
+    recall_score,
+    roc_auc_score,
     roc_curve,
 )
 
@@ -26,8 +28,6 @@ def compute_all_metrics(
     y_pred: np.ndarray,
     y_prob: np.ndarray,
 ) -> dict:
-    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
-
     return {
         "accuracy": round(
             accuracy_score(y_true, y_pred), 4
@@ -91,7 +91,7 @@ def save_roc_curve(
     fig = go.Figure()
     for name, probs in all_probs.items():
         fpr, tpr, _ = roc_curve(y_true, probs)
-        auc = __import__("sklearn.metrics").metrics.roc_auc_score(y_true, probs)
+        auc = roc_auc_score(y_true, probs)
         fig.add_trace(
             go.Scatter(
                 x=fpr, y=tpr, mode="lines",
@@ -174,7 +174,7 @@ def compare_models(
 
 
 def run_evaluation(
-    models: dict[str, object],
+    models: dict[str, Any],
     X_test: pd.DataFrame,
     y_test: pd.Series,
 ) -> pd.DataFrame:

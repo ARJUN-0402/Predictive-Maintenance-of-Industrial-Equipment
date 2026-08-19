@@ -1,4 +1,4 @@
-from pathlib import Path
+from typing import cast\nfrom pathlib import Path
 
 import joblib
 import pandas as pd
@@ -9,7 +9,6 @@ from src.config import (
     XGBoost_MODEL_PATH,
 )
 from src.feature_engineering import engineer_features
-
 from src.utils import setup_logging
 
 logger = setup_logging("predict")
@@ -47,10 +46,13 @@ def predict(
     model_path: Path | None = None,
     scaler_path: Path | None = None,
     threshold: float = 0.5,
-) -> dict[str, object] | list[dict[str, object]]:
+) -> dict:
     model, preprocessor = load_model(model_path, scaler_path)
     df = prepare_input_df(input_data)
+
+    # Engineer features (must match training pipeline)
     df = engineer_features(df)
+
     if "Type" in df.columns:
         type_dummies = pd.get_dummies(df["Type"], prefix="Type", dtype=int)
         for col in ["Type_L", "Type_M", "Type_H"]:
@@ -65,11 +67,15 @@ def predict(
 
     X_scaled = preprocessor.transform(X)
 
+    # Clean feature names to match XGBoost model expectations
+    # The preprocessor may produce columns with original names;
+    # ensure they match the booster's expected feature names
     booster = model.get_booster()
     expected_features = booster.feature_names
     current_features = list(X_scaled.columns)
 
     if current_features != expected_features:
+        # Rename columns to match the model's expected feature names
         rename_dict = dict(zip(current_features, expected_features))
         X_scaled = X_scaled.rename(columns=rename_dict)
 
@@ -85,7 +91,7 @@ def predict(
                 "risk_level": _classify_risk(y_prob[i], threshold),
             }
         )
-    return results[0] if len(results) == 1 else results
+    return cast(dict[str, object] | list[dict[str, object]], results[0] if len(results) == 1 else results)  # type: ignore[return-value]
 
 
 def _classify_risk(probability: float, threshold: float = 0.5) -> str:
