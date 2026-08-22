@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import sys
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -214,4 +215,47 @@ __all__ = [
     "save_classification_report",
     "compare_models",
     "run_evaluation",
+    "main",
 ]
+
+
+def main() -> int:
+    """CLI entry point: train models and run full evaluation.
+
+    Trains all models via the shared training pipeline, then evaluates them
+    on the held-out test set. Generates confusion matrices, ROC/PR curves,
+    a classification report, and a model comparison CSV under reports/.
+    Prints the model comparison table to stdout.
+
+    Returns:
+        0 on success, 1 on failure.
+    """
+    try:
+        from src.train import train_all_models
+
+        logger.info("=== Training models ===")
+        results = train_all_models()
+
+        logger.info("=== Running evaluation ===")
+        comparison_df = run_evaluation(
+            results["models"], results["X_test"], results["y_test"]
+        )
+
+        print("\n=== Model Comparison (sorted by ROC-AUC) ===\n")
+        with pd.option_context(
+            "display.max_columns", None,
+            "display.width", 200,
+            "display.float_format", "{:.4f}".format,
+        ):
+            print(comparison_df.to_string())
+        print()
+
+        logger.info("=== Evaluation artifacts saved to reports/ ===")
+        return 0
+    except Exception as exc:
+        logger.error("Evaluation pipeline failed: %s", exc, exc_info=True)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

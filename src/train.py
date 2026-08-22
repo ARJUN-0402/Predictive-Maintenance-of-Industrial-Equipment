@@ -1,6 +1,8 @@
 import json
 import logging  # noqa: F401 (used indirectly via setup_logging)
+import sys
 from datetime import datetime
+from typing import Any
 
 import joblib
 import numpy as np
@@ -118,12 +120,25 @@ def save_model_registry(
     threshold: float | None = None,
 ) -> None:
     MODEL_REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    registry: dict = {}
+    registry: dict = {"versions": {}}
     if MODEL_REGISTRY_PATH.exists():
         with open(MODEL_REGISTRY_PATH, "r") as f:
-            registry = json.load(f)
+            loaded = json.load(f)
+        if "versions" in loaded:
+            registry = loaded
+        else:
+            registry["versions"] = loaded
+            if "dataset_info" in loaded:
+                registry["shared"] = {
+                    "dataset_info": loaded["dataset_info"],
+                    "feature_config": loaded.get("feature_config", {}),
+                }
+            elif "shared" in loaded:
+                registry["shared"] = loaded["shared"]
 
-    version = f"v{len(registry) + 1}"
+    versions = registry.setdefault("versions", {})
+
+    version = f"v{len(versions) + 1}"
     entry: dict[str, object] = {
         "version": version,
         "timestamp": datetime.now().isoformat(),
@@ -131,14 +146,20 @@ def save_model_registry(
         "best_params": best_params,
         "metrics": metrics,
     }
-    if dataset_info is not None:
-        entry["dataset_info"] = dataset_info
-    if feature_config is not None:
-        entry["feature_config"] = feature_config
     if threshold is not None:
         entry["threshold"] = threshold
 
-    registry[version] = entry
+    if "shared" not in registry and dataset_info is not None and feature_config is not None:
+        registry["shared"] = {
+            "dataset_info": dataset_info,
+            "feature_config": feature_config,
+        }
+    elif "shared" not in registry and dataset_info is not None:
+        registry["shared"] = {"dataset_info": dataset_info, "feature_config": {}}
+    elif "shared" not in registry and feature_config is not None:
+        registry["shared"] = {"dataset_info": {}, "feature_config": feature_config}
+
+    versions[version] = entry
 
     with open(MODEL_REGISTRY_PATH, "w") as f:
         json.dump(registry, f, indent=2)
@@ -266,6 +287,62 @@ def train_all_models() -> dict:
     }
 
 
-if __name__ == "__main__":
+def run_full_experiment() -> dict[str, Any]:
+    """Run the complete experiment: train → evaluate → threshold optimization.
+
+    Convenience wrapper that chains the three pipeline stages without
+    duplicating any logic. Each stage's functions are imported lazily
+    to avoid circular imports at module load time.
+    """
+    logger.info("=== Stage 1/3: Training ===")
     results = train_all_models()
-    logger.info("Training complete. Best model: xgboost")
+
+    logger.info("=== Stage 2/3: Evaluation ===")
+    from src.evaluate import run_evaluation
+
+    comparison_df = run_evaluation(
+        results["models"], results["X_test"], results["y_test"]
+    )
+    results["comparison_df"] = comparison_df
+
+    logger.info("=== Stage 3/3: Threshold Optimization ===")
+    from src.threshold_optimization import (
+        optimize_threshold,
+        recommend_threshold_for_recall,
+    )
+
+    y_prob = results["models"]["xgboost"].predict_proba(results["X_test"])[:, 1]
+    threshold_result = optimize_threshold(results["y_test"], y_prob)
+    recall_result = recommend_threshold_for_recall(
+        results["y_test"], y_prob, minimum_recall=0.80
+    )
+    results["threshold_result"] = threshold_result
+    results["recall_result"] = recall_result
+
+    return results
+
+
+def main() -> int:
+    """CLI entry point for training.
+
+    Trains all models, saves artifacts, and prints a summary of test-set
+    metrics to stdout. Returns 0 on success, 1 on failure.
+    """
+    try:
+        results = train_all_models()
+        print("\n=== Training Complete ===\n")
+        for name, m in results["metrics"].items():
+            print(
+                f"  {name:20s}  acc={m['accuracy']:.4f}  "
+                f"prec={m['precision']:.4f}  rec={m['recall']:.4f}  "
+                f"f1={m['f1']:.4f}  roc_auc={m['roc_auc']:.4f}"
+            )
+        print()
+        return 0
+    except Exception as exc:
+        logger.error("Training failed: %s", exc, exc_info=True)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

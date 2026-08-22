@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import numpy as np
 import pandas as pd
@@ -220,3 +221,59 @@ def recommend_threshold_for_recall(
         "f1": best_f1,
         "objective": "maximize recall subject to minimum recall constraint",
     }
+
+
+def main() -> int:
+    """CLI entry point: train models and run threshold optimization.
+
+    Trains all models via the shared training pipeline, obtains XGBoost
+    predicted probabilities on the held-out test set, then runs both
+    threshold optimization strategies. Prints the best-F1 and
+    recall-oriented thresholds to stdout and generates the HTML threshold
+    reports under reports/figures/.
+
+    Returns:
+        0 on success, 1 on failure.
+    """
+    try:
+        from src.train import train_all_models
+
+        logger.info("=== Training models ===")
+        results = train_all_models()
+
+        y_prob = results["models"]["xgboost"].predict_proba(results["X_test"])[:, 1]
+        y_test = results["y_test"]
+
+        logger.info("=== Threshold optimization (maximize F1) ===")
+        result = optimize_threshold(y_test, y_prob)
+
+        print("\n=== Threshold Optimization (maximize F1) ===\n")
+        print(f"  Best threshold:      {result['best_threshold']:.4f}")
+        print(f"  Best F1:             {result['best_f1']:.4f}")
+        print(f"  Precision:           {result['best_precision']:.4f}")
+        print(f"  Recall:              {result['best_recall']:.4f}")
+        print(f"  False positives:     {result['best_false_positives']}")
+        print(f"  False negatives:     {result['best_false_negatives']}")
+        print()
+
+        logger.info("=== Recall-oriented threshold (min recall >= 0.80) ===")
+        rec_result = recommend_threshold_for_recall(
+            y_test, y_prob, minimum_recall=0.80
+        )
+
+        print("=== Recall-Oriented Threshold (min recall >= 0.80) ===\n")
+        print(f"  Recommended threshold: {rec_result['threshold']:.4f}")
+        print(f"  Recall:               {rec_result['recall']:.4f}")
+        print(f"  Precision:            {rec_result['precision']:.4f}")
+        print(f"  F1:                   {rec_result['f1']:.4f}")
+        print()
+
+        logger.info("=== Threshold reports saved to reports/figures/ ===")
+        return 0
+    except Exception as exc:
+        logger.error("Threshold optimization pipeline failed: %s", exc, exc_info=True)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

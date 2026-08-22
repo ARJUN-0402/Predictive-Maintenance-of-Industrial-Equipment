@@ -157,17 +157,55 @@ The app will be available at `http://localhost:8501`.
 ### 1. Train models
 
 ```bash
-python src/train.py
+python -m src.train
 ```
 
 This will:
 1. Download `ai4i2020.csv` into `data/raw/` if it isn't already there
 2. Engineer features and fit the preprocessing pipeline on the training split only
 3. Train XGBoost (with GridSearchCV), Random Forest, Gradient Boosting, and Logistic Regression
-4. Save all model artifacts to `models/` and write a run entry to `model_registry.json`
-5. Save evaluation plots and reports to `reports/`
+4. Save the XGBoost model to `models/xgboost_model.pkl` and the scaler to `models/scaler.pkl`
+5. Append a versioned run entry to `models/model_registry.json`
+6. Print test-set metrics (accuracy, precision, recall, F1, ROC-AUC) for all four models
 
-### 2. Launch the dashboard
+> **Note:** This project uses absolute imports (e.g. `from src.config import ...`), so modules must be run with `python -m <module>` from the project root. Running `python src/train.py` directly will fail with `ModuleNotFoundError`.
+
+### 2. Evaluate models and generate reports
+
+```bash
+python -m src.evaluate
+```
+
+This will:
+1. Run the full training pipeline (same as `python -m src.train`)
+2. Evaluate all four models on the held-out test set
+3. Generate the following artifacts under `reports/`:
+   - `reports/figures/confusion_matrix_xgboost.png`
+   - `reports/figures/confusion_matrix_random_forest.png`
+   - `reports/figures/confusion_matrix_gradient_boosting.png`
+   - `reports/figures/confusion_matrix_logistic_regression.png`
+   - `reports/results/roc_curve.html`
+   - `reports/results/pr_curve.html`
+   - `reports/results/classification_report.txt`
+   - `reports/results/model_comparison.csv`
+4. Print a model comparison table (sorted by ROC-AUC) to stdout
+
+### 3. Run threshold optimization
+
+```bash
+python -m src.threshold_optimization
+```
+
+This will:
+1. Run the full training pipeline
+2. Obtain XGBoost predicted probabilities on the held-out test set
+3. Run F1-maximizing threshold optimization and a recall-oriented search (min recall ≥ 0.80)
+4. Print the best threshold, F1, precision, recall, false positives, and false negatives to stdout
+5. Generate the following HTML reports:
+   - `reports/figures/precision_recall_curve.html`
+   - `reports/figures/threshold_analysis.html`
+
+### 4. Launch the dashboard
 
 ```bash
 streamlit run app/streamlit_app.py
