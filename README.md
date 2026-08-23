@@ -47,15 +47,14 @@ Stratified 80/20 split, `RANDOM_SEED = 42`. Class imbalance handled via `scale_p
 
 ## Threshold Optimization
 
-The decision threshold is optimized separately from model training using the XGBoost probability outputs on the test set.
+The decision threshold is optimized separately from model training using the XGBoost probability outputs on the test set. Two strategies are evaluated:
 
-| Strategy | Threshold | Precision | Recall | F1 |
-|---|---:|---:|---:|---:|
-| F1-maximizing | 0.74 | 0.8966 | 0.7647 | 0.8254 |
-| Recall-oriented | 0.61 | 0.8088 | 0.8088 | 0.8088 |
+| Strategy | Description |
+|---|---|
+| **F1-maximizing** | Balances precision and recall for general-purpose deployment |
+| **Recall-oriented** | Prioritizes high recall when missed failures are more costly than false alarms |
 
-- **F1-maximizing** (threshold = 0.74) balances precision and recall for general-purpose deployment.
-- **Recall-oriented** (threshold = 0.61) raises recall to 0.8088 while keeping precision at 0.8088, which can be useful when missed failures are more costly than false alarms. It is not claimed to be universally optimal for all industrial operations.
+Threshold values are persisted in `models/model_registry.json` and loaded dynamically by the dashboard. No single threshold is claimed to be universally optimal for all industrial operations.
 
 ---
 
@@ -160,7 +159,15 @@ The app will be available at `http://localhost:8501`.
 
 ## Usage
 
-### 1. Train models
+### 1. Launch the dashboard (recommended)
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+Opens the dashboard at `http://localhost:8501`. Pretrained model artifacts are loaded automatically when available. No training is required to make predictions.
+
+### 2. Train models (optional)
 
 ```bash
 python -m src.train
@@ -168,7 +175,7 @@ python -m src.train
 
 Downloads the dataset (if missing), engineers features, preprocesses the training split, trains all four classifiers, saves the best model and scaler to `models/`, updates `models/model_registry.json`, and prints test-set metrics.
 
-### 2. Evaluate models and generate reports
+### 3. Evaluate models and generate reports (optional)
 
 ```bash
 python -m src.evaluate
@@ -176,21 +183,13 @@ python -m src.evaluate
 
 Runs evaluation on the held-out test set and generates confusion matrices, ROC/PR curves, classification reports, and a model comparison CSV under `reports/`.
 
-### 3. Run threshold optimization
+### 4. Run threshold optimization (optional)
 
 ```bash
 python -m src.threshold_optimization
 ```
 
-Searches for F1-maximizing and recall-oriented decision thresholds, prints optimal thresholds and metrics, and saves HTML reports for the precision-recall curve and threshold analysis.
-
-### 4. Launch the dashboard
-
-```bash
-streamlit run app/streamlit_app.py
-```
-
-Opens the 8-page Streamlit dashboard at `http://localhost:8501`.
+Searches for F1-maximizing and recall-oriented decision thresholds, prints optimal thresholds and metrics, saves HTML reports, and updates the model registry with the selected thresholds.
 
 ---
 
@@ -258,21 +257,41 @@ python -m flake8 src/ app/ tests/ --max-line-length=100
 ```
 
 ---
+## Deployment
 
+### Streamlit Community Cloud
+
+1. Push this repository to GitHub.
+2. Go to [share.streamlit.io](https://share.streamlit.io) and sign in.
+3. Click **New app**, select the repository, and set the main file to `app/streamlit_app.py`.
+4. Click **Deploy**.
+
+The deployed app will be available at the URL provided by Streamlit Community Cloud.
+
+---
 ## Streamlit Dashboard
 
-The dashboard contains 8 pages accessible from the sidebar:
+The dashboard is organized around the primary prediction workflow:
+
+| Section | Page |
+|---|---|
+| **Overview** | Home |
+| **Data** | Dataset Overview, Exploratory Data Analysis |
+| **Prediction** | Predict Failure, Explain Prediction |
+| **Evaluation** | Performance Metrics |
+| **Reports** | Download Reports |
+| **Admin** | Train Model |
 
 | Page | What you can do |
 |---|---|
-| Home | Overview, architecture diagram, quick-start guide |
+| Home | Landing page with metrics, architecture, and quick start |
 | Dataset Overview | Inspect raw and processed data, check class balance, download CSV |
 | Exploratory Data Analysis | Interactive histograms, heatmap, box plots, scatter plots |
-| Train Model | Trigger training, watch live status, compare model metrics |
 | Predict Failure | Manual sliders or CSV upload; adjustable decision threshold |
 | Explain Prediction | SHAP waterfall + force plot; LIME bar chart; plain-English summary |
 | Performance Metrics | Confusion matrix, ROC/PR curves, F1 vs threshold chart |
 | Download Reports | PDF report, predictions CSV, trained model `.pkl`, SHAP PNG |
+| Train Model | Retrain models using the current dataset |
 
 ---
 

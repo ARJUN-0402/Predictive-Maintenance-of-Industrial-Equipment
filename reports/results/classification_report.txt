@@ -1,0 +1,43 @@
+=== xgboost ===
+              precision    recall  f1-score   support
+
+      Normal       0.99      0.99      0.99      1932
+     Failure       0.73      0.84      0.78        68
+
+    accuracy                           0.98      2000
+   macro avg       0.86      0.91      0.89      2000
+weighted avg       0.99      0.98      0.98      2000
+
+
+=== random_forest ===
+              precision    recall  f1-score   support
+
+      Normal       0.99      1.00      0.99      1932
+     Failure       0.85      0.78      0.82        68
+
+    accuracy                           0.99      2000
+   macro avg       0.92      0.89      0.90      2000
+weighted avg       0.99      0.99      0.99      2000
+
+
+=== gradient_boosting ===
+              precision    recall  f1-score   support
+
+      Normal       0.99      1.00      0.99      1932
+     Failure       0.91      0.78      0.84        68
+
+    accuracy                           0.99      2000
+   macro avg       0.95      0.89      0.92      2000
+weighted avg       0.99      0.99      0.99      2000
+
+
+=== logistic_regression ===
+              precision    recall  f1-score   support
+
+      Normal       0.99      0.87      0.93      1932
+     Failure       0.19      0.85      0.31        68
+
+    accuracy                           0.87      2000
+   macro avg       0.59      0.86      0.62      2000
+weighted avg       0.97      0.87      0.91      2000
+

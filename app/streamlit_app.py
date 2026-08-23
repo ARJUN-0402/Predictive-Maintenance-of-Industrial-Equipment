@@ -1,131 +1,510 @@
+import json
 import os
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from sklearn.metrics import f1_score
 
 from src.config import (
+    FIGURES_DIR,
+    MODEL_REGISTRY_PATH,
     RESULTS_DIR,
+    SCALER_PATH,
     TARGET_COLUMN,
+    TEST_DATA_PATH,
+    TRAIN_DATA_PATH,
     XGBoost_MODEL_PATH,
 )
 from src.data_loader import load_dataset
+from src.evaluate import compare_models
 from src.explain import (
     get_shap_explainer,
+    get_top_features_shap,
     lime_explain,
     shap_dependence_plots,
     shap_force_plot_html,
     shap_waterfall_plot,
-    get_top_features_shap,
 )
 from src.predict import batch_predict, predict
 from src.preprocessing import load_processed_data
 from src.train import train_all_models
-from src.utils import card_html, setup_logging
+from src.utils import card_html, generate_report, setup_logging
 
 logger = setup_logging("streamlit_app")
 
 
+# ---------------------------------------------------------------------------
+# CSS
+# ---------------------------------------------------------------------------
 def _get_css() -> str:
     return """
 <style>
     .stApp { background-color: #0e1117; }
-    .stMetric, .stCard { background-color: #1c1e26; border-radius: 12px;
-    padding: 16px; margin: 8px; }
-    .stButton>button { background-color: #00d4ff; color: #0e1117;
-    border: none; border-radius: 8px; font-weight: bold; }
-    .stSlider>div>div { background-color: #00d4ff; }
+    .metric-card { background-color: #1c1e26; border-radius: 12px;
+        padding: 16px; margin: 8px; text-align: center;
+        border-left: 4px solid #00d4ff; }
+    .metric-card .label { font-size: 12px; color: #8b8b9b; margin-bottom: 4px; }
+    .metric-card .value { font-size: 28px; font-weight: bold; color: #00d4ff; }
+    .stButton>button { border-radius: 8px; font-weight: 600; }
     .block-container { padding-top: 1rem; }
-    h1, h2, h3 { color: #00d4ff; }
+    h1, h2, h3 { color: #e0e0e0; }
     .stDataFrame { background-color: #1c1e26; color: #e0e0e0; }
-    .css-1d391kg { background-color: #0e1117; }
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { background-color: #1c1e26; color: #e0e0e0; border-radius: 8px; }
+    .stTabs [data-baseweb="tab"] { background-color: #1c1e26; color: #e0e0e0;
+        border-radius: 8px; }
     .stTabs [aria-selected="true"] { background-color: #00d4ff; color: #0e1117; }
+
+    /* Hero */
+    .hero { background: linear-gradient(135deg, #1c1e26 0%, #0e1117 100%);
+        border-radius: 16px; padding: 32px; margin-bottom: 24px;
+        border: 1px solid #2a2d3a; }
+    .hero h1 { color: #ffffff; font-size: 2.2rem; font-weight: 700;
+        margin-bottom: 8px; }
+    .hero p { color: #b0b0b0; font-size: 1.05rem; line-height: 1.6;
+        margin-bottom: 20px; }
+
+    /* Section title */
+    .section-title { color: #00d4ff; font-size: 1.05rem; font-weight: 600;
+        margin-top: 24px; margin-bottom: 12px; text-transform: uppercase;
+        letter-spacing: 0.5px; }
+
+    /* Architecture */
+    .arch-node { background-color: #1c1e26; border: 1px solid #2a2d3a;
+        border-radius: 10px; padding: 14px; text-align: center; margin: 6px; }
+    .arch-node .title { font-size: 13px; font-weight: 600; color: #00d4ff; }
+    .arch-node .desc { font-size: 11px; color: #8b8b9b; margin-top: 4px; }
+    .arch-arrow { text-align: center; color: #00d4ff; font-size: 20px; margin: 4px 0; }
+
+    /* Highlights */
+    .highlight-item { display: flex; align-items: center; gap: 8px;
+        padding: 6px 0; color: #e0e0e0; font-size: 0.95rem; }
+    .highlight-item .icon { color: #00c853; font-weight: bold; }
+
+    /* Status dots */
+    .status-dot { display: inline-block; width: 8px; height: 8px;
+        border-radius: 50%; margin-right: 6px; }
+    .status-ready { background-color: #00c853; }
+    .status-warn { background-color: #ffab00; }
+    .status-error { background-color: #ff4b4b; }
+
+    /* Prediction card */
+    .prediction-card { background-color: #1c1e26; border-radius: 14px;
+        padding: 24px; margin: 16px 0; border-left: 5px solid #00d4ff;
+        text-align: center; }
+    .prediction-card .prob { font-size: 3rem; font-weight: 700; }
+    .prediction-card .label { font-size: 1.2rem; font-weight: 600;
+        color: #e0e0e0; margin-top: 4px; }
+    .prediction-card .meta { font-size: 0.9rem; color: #8b8b9b; margin-top: 8px; }
+
+    /* Action box */
+    .action-box { background-color: #1c1e26; border-radius: 10px; padding: 16px;
+        margin-top: 12px; border: 1px solid #2a2d3a; }
+    .action-box .title { font-size: 0.9rem; font-weight: 600; color: #00d4ff;
+        margin-bottom: 6px; }
+    .action-box .text { font-size: 0.85rem; color: #b0b0b0; line-height: 1.5; }
+
+    /* Sidebar section */
+    .sidebar-section { margin-bottom: 16px; }
+    .sidebar-section .section-header { font-size: 0.7rem; font-weight: 700;
+        color: #6b6b7b; text-transform: uppercase; letter-spacing: 0.8px;
+        margin-bottom: 6px; padding-left: 4px; }
+    .stAlert { border-radius: 10px; }
 </style>
 """
 
 
+# ---------------------------------------------------------------------------
+# Session state
+# ---------------------------------------------------------------------------
 def _init_session_state() -> None:
-    if "models_trained" not in st.session_state:
-        st.session_state.models_trained = False
-    if "models" not in st.session_state:
-        st.session_state.models = {}
-    if "metrics" not in st.session_state:
-        st.session_state.metrics = {}
-    if "X_test" not in st.session_state:
-        st.session_state.X_test = None
-    if "y_test" not in st.session_state:
-        st.session_state.y_test = None
-    if "preprocessor" not in st.session_state:
-        st.session_state.preprocessor = None
-    if "comparison_df" not in st.session_state:
-        st.session_state.comparison_df = None
-    if "df_raw" not in st.session_state:
-        st.session_state.df_raw = None
-    if "df_processed" not in st.session_state:
-        st.session_state.df_processed = None
+    defaults = {
+        "models_trained": False,
+        "models": {},
+        "metrics": {},
+        "X_test": None,
+        "y_test": None,
+        "preprocessor": None,
+        "comparison_df": None,
+        "df_raw": None,
+        "df_processed": None,
+        "training_in_progress": False,
+    }
+    for key, val in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = val
 
 
-def page_home() -> None:
-    st.title("Predictive Maintenance of Industrial Equipment")
-    st.markdown(
-        "### Using XGBoost and Explainable AI (XAI)"
+# ---------------------------------------------------------------------------
+# Cached resource loaders
+# ---------------------------------------------------------------------------
+@st.cache_resource
+def load_model_resource() -> tuple:
+    from src.predict import load_model
+
+    return load_model()
+
+
+@st.cache_resource
+def load_registry_resource() -> dict:
+    if MODEL_REGISTRY_PATH.exists():
+        with open(MODEL_REGISTRY_PATH, "r") as f:
+            return json.load(f)
+    return {}
+
+
+def _latest_version_key(versions: dict) -> str | None:
+    if not versions:
+        return None
+
+    def _sort_key(key: str) -> int:
+        try:
+            return int(key.lstrip("vV"))
+        except ValueError:
+            return 0
+
+    return sorted(versions.keys(), key=_sort_key)[-1]
+
+
+@st.cache_data
+def load_latest_version_metrics() -> dict:
+    registry = load_registry_resource()
+    versions = registry.get("versions", {})
+    latest_key = _latest_version_key(versions)
+    if latest_key is None:
+        return {}
+    return versions[latest_key].get("metrics", {})
+
+
+@st.cache_data
+def load_xgboost_metrics() -> dict | None:
+    """Return the latest XGBoost metrics from the registry."""
+    registry = load_registry_resource()
+    versions = registry.get("versions", {})
+    xgb_versions = {k: v for k, v in versions.items() if v.get("model") == "xgboost"}
+    if not xgb_versions:
+        return None
+    latest_key = _latest_version_key(xgb_versions)
+    if latest_key is None:
+        return None
+    return xgb_versions[latest_key].get("metrics", {})
+
+
+@st.cache_data
+def load_model_comparison() -> pd.DataFrame | None:
+    comp_path = RESULTS_DIR / "model_comparison.csv"
+    if comp_path.exists():
+        return pd.read_csv(comp_path, index_col=0)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+def artifacts_exist() -> bool:
+    return XGBoost_MODEL_PATH.exists() and SCALER_PATH.exists()
+
+
+def processed_data_exists() -> bool:
+    return TRAIN_DATA_PATH.exists() and TEST_DATA_PATH.exists()
+
+
+def _artifact_warning() -> None:
+    st.warning(
+        "No pretrained model artifacts were found. Prediction and "
+        "explainability require trained models. You can train models under "
+        "**Administration → Model Training**."
     )
-    st.markdown(
-        "This application predicts machine failures in industrial equipment "
-        "using machine learning models with SHAP and LIME explanations."
-    )
 
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.markdown(card_html("Models", "4", "#00d4ff"))
-    with col2:
-        st.markdown(card_html("Primary Model", "XGBoost", "#00c853"))
-    with col3:
-        st.markdown(card_html("Features", "13", "#ffab00"))
-    with col4:
-        st.markdown(card_html("Target", "Machine Failure", "#ff4b4b"))
 
-    st.markdown("---")
-    st.markdown("#### Architecture")
+def _render_architecture() -> None:
     st.markdown(
         """
-        <div style="background:#1c1e26;padding:20px;border-radius:12px;">
-        <pre style="color:#e0e0e0;font-family:monospace;">
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│  Data Loader  │───▶│ Preprocessing│───▶│Feature Eng.  │
-│  (AI4I 2020)  │    │  (Pipeline)  │    │  (Derived    │
-│               │    │              │    │   Features)  │
-└──────────────┘    └──────────────┘    └──────────────┘
-                                                      │
-                                                      ▼
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│   Streamlit   │◀───│  Model Store │◀───│   Training   │
-│   App (UI)    │    │ (XGBoost +   │    │ (4 Models)   │
-│               │    │  RF, GB, LR) │    │              │
-└──────────────┘    └──────────────┘    └──────────────┘
-                                                      │
-                                                      ▼
-                                            ┌──────────────┐
-                                            │   Explain AI  │
-                                            │ (SHAP + LIME) │
-                                            └──────────────┘
-        </pre>
+        <div style="display:flex;flex-direction:column;align-items:center;
+            gap:4px;margin:16px 0;">
+            <div class="arch-node" style="min-width:140px;">
+                <div class="title">DATA</div>
+                <div class="desc">AI4I 2020</div>
+            </div>
+            <div class="arch-arrow">&#x2193;</div>
+            <div style="display:flex;flex-wrap:wrap;justify-content:center;
+                gap:8px;width:100%;">
+                <div class="arch-node" style="flex:1;min-width:140px;">
+                    <div class="title">Raw Dataset</div>
+                    <div class="desc">10,000 sensor rows</div>
+                </div>
+            </div>
+            <div class="arch-arrow">&#x2193;</div>
+            <div style="display:flex;flex-wrap:wrap;justify-content:center;
+                gap:8px;width:100%;">
+                <div class="arch-node" style="flex:1;min-width:140px;">
+                    <div class="title">Preprocessing</div>
+                    <div class="desc">Clean / Encode / Scale</div>
+                </div>
+            </div>
+            <div class="arch-arrow">&#x2193;</div>
+            <div style="display:flex;flex-wrap:wrap;justify-content:center;
+                gap:8px;width:100%;">
+                <div class="arch-node" style="flex:1;min-width:140px;">
+                    <div class="title">Feature Engineering</div>
+                    <div class="desc">Derived sensor features</div>
+                </div>
+            </div>
+            <div class="arch-arrow">&#x2193;</div>
+            <div style="display:flex;flex-wrap:wrap;justify-content:center;
+                gap:8px;width:100%;">
+                <div class="arch-node" style="flex:1;min-width:140px;">
+                    <div class="title">ML Prediction</div>
+                    <div class="desc">XGBoost classifier</div>
+                </div>
+            </div>
+            <div class="arch-arrow">&#x2193;</div>
+            <div style="display:flex;flex-wrap:wrap;justify-content:center;
+                gap:8px;width:100%;">
+                <div class="arch-node" style="flex:1;min-width:140px;">
+                    <div class="title">Failure Risk</div>
+                    <div class="desc">Probability + Threshold</div>
+                </div>
+            </div>
+            <div class="arch-arrow">&#x2193;</div>
+            <div style="display:flex;flex-wrap:wrap;justify-content:center;
+                gap:8px;width:100%;">
+                <div class="arch-node" style="flex:1;min-width:140px;">
+                    <div class="title">SHAP</div>
+                    <div class="desc">Global + Local XAI</div>
+                </div>
+                <div class="arch-node" style="flex:1;min-width:140px;">
+                    <div class="title">LIME</div>
+                    <div class="desc">Local explanation</div>
+                </div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("#### Quick Start")
-    st.markdown("1. Go to **Dataset Overview** to inspect the data")
-    st.markdown("2. Go to **Train Model** to train all classifiers")
-    st.markdown("3. Go to **Predict Failure** to make predictions")
-    st.markdown("4. Go to **Explain Prediction** to understand model decisions")
-    st.markdown("5. Go to **Performance Metrics** to evaluate models")
+
+# ---------------------------------------------------------------------------
+# Pages
+# ---------------------------------------------------------------------------
+def page_home() -> None:
+    st.markdown(
+        """
+        <div class="hero">
+            <h1>Predictive Maintenance of Industrial Equipment</h1>
+            <p>ML-powered machine failure prediction using XGBoost and
+            Explainable AI. Predict equipment failure from sensor data, adjust
+            the decision threshold, and understand each prediction with SHAP
+            and LIME.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(
+            "⚡ Try Failure Prediction",
+            type="primary",
+            use_container_width=True,
+        ):
+            st.session_state["page"] = "Predict Failure"
+            st.rerun()
+    with col2:
+        if st.button(
+            "🔎 Explore Explainability",
+            use_container_width=True,
+        ):
+            st.session_state["page"] = "Explain Prediction"
+            st.rerun()
+
+    # --- Project overview cards ---
+    registry = load_registry_resource()
+    shared = registry.get("shared", {})
+    dataset_info = shared.get("dataset_info", {})
+    versions = registry.get("versions", {})
+    num_models = len({v.get("model") for v in versions.values()}) if versions else 0
+    dataset_rows = dataset_info.get("rows", "Available after training")
+    primary_model = "XGBoost" if artifacts_exist() else "Available after training"
+    explainability = "SHAP + LIME" if artifacts_exist() else "Available after training"
+
+    st.markdown(
+        '<div class="section-title">Project Overview</div>',
+        unsafe_allow_html=True,
+    )
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.markdown(
+            card_html("Models", str(num_models), "#00d4ff"),
+            unsafe_allow_html=True,
+        )
+    with c2:
+        st.markdown(
+            card_html("Dataset", f"{dataset_rows} rows", "#00c853"),
+            unsafe_allow_html=True,
+        )
+    with c3:
+        st.markdown(
+            card_html("Primary Model", primary_model, "#ffab00"),
+            unsafe_allow_html=True,
+        )
+    with c4:
+        st.markdown(
+            card_html("Explainability", explainability, "#ff4b4b"),
+            unsafe_allow_html=True,
+        )
+
+    # --- Deployed model performance (XGBoost) ---
+    st.markdown(
+        '<div class="section-title">Deployed Model Performance (XGBoost)</div>',
+        unsafe_allow_html=True,
+    )
+    xgb_metrics = load_xgboost_metrics()
+    if xgb_metrics:
+        m1, m2, m3, m4, m5 = st.columns(5)
+        with m1:
+            st.markdown(
+                card_html("Accuracy", f"{xgb_metrics.get('accuracy', 0):.4f}", "#00d4ff"),
+                unsafe_allow_html=True,
+            )
+        with m2:
+            st.markdown(
+                card_html("Precision", f"{xgb_metrics.get('precision', 0):.4f}", "#00c853"),
+                unsafe_allow_html=True,
+            )
+        with m3:
+            st.markdown(
+                card_html("Recall", f"{xgb_metrics.get('recall', 0):.4f}", "#ffab00"),
+                unsafe_allow_html=True,
+            )
+        with m4:
+            st.markdown(
+                card_html("F1", f"{xgb_metrics.get('f1', 0):.4f}", "#00d4ff"),
+                unsafe_allow_html=True,
+            )
+        with m5:
+            st.markdown(
+                card_html("ROC-AUC", f"{xgb_metrics.get('roc_auc', 0):.4f}", "#00c853"),
+                unsafe_allow_html=True,
+            )
+        st.caption(
+            "Metrics computed on the held-out test set with the default "
+            "0.50 threshold."
+        )
+    else:
+        st.info("Model metrics will appear here after training.")
+
+    # --- Model comparison table ---
+    comp_df = load_model_comparison()
+    if comp_df is not None and "xgboost" in comp_df.index:
+        st.markdown(
+            '<div class="section-title">Model Comparison (sorted by ROC-AUC)</div>',
+            unsafe_allow_html=True,
+        )
+        styled = comp_df.copy()
+        styled.index.name = "Model"
+        styled = styled.reset_index()
+        styled["Model"] = styled["Model"].apply(
+            lambda m: f"⭐ {m.title()}" if m == "xgboost" else m.title()
+        )
+        st.dataframe(styled, use_container_width=True, hide_index=True)
+        st.caption(
+            "XGBoost is the primary deployed model. Other models are "
+            "training benchmarks."
+        )
+
+    # --- Architecture ---
+    st.markdown(
+        '<div class="section-title">Architecture</div>',
+        unsafe_allow_html=True,
+    )
+    with st.container(border=True):
+        _render_architecture()
+
+    # --- How it works ---
+    st.markdown(
+        '<div class="section-title">How It Works</div>',
+        unsafe_allow_html=True,
+    )
+    steps = [
+        ("01", "Sensor Data",
+         "Industrial equipment measurements are loaded from the AI4I 2020 dataset."),
+        ("02", "Preprocessing",
+         "Data is cleaned, encoded, scaled, and transformed for modeling."),
+        ("03", "Feature Engineering",
+         "Derived features capture physical relationships in the sensor readings."),
+        ("04", "Failure Prediction",
+         "The trained XGBoost model produces a failure probability."),
+        ("05", "Explainable Decision",
+         "The prediction is classified by threshold and explained using SHAP and LIME."),
+    ]
+    for num, title, desc in steps:
+        c1, c2 = st.columns([1, 5])
+        with c1:
+            st.markdown(
+                f"<div style='font-size:1.4rem;font-weight:700;color:#00d4ff;'>{num}</div>",
+                unsafe_allow_html=True,
+            )
+        with c2:
+            st.markdown(f"**{title}**  {desc}")
+        st.markdown(
+            "<hr style='margin:8px 0;border-color:#2a2d3a;'>",
+            unsafe_allow_html=True,
+        )
+
+    # --- Project highlights ---
+    st.markdown(
+        '<div class="section-title">Project Highlights</div>',
+        unsafe_allow_html=True,
+    )
+    highlights = [
+        "Machine failure prediction",
+        "XGBoost + model comparison",
+        "Adjustable decision threshold",
+        "SHAP explainability",
+        "LIME explainability",
+        "Batch CSV prediction",
+        "Automated evaluation",
+        "Model artifact management",
+    ]
+    cols = st.columns(2)
+    for i, item in enumerate(highlights):
+        with cols[i % 2]:
+            st.markdown(
+                f"<div class='highlight-item'><span class='icon'>✓</span>{item}</div>",
+                unsafe_allow_html=True,
+            )
+
+    # --- System status ---
+    st.markdown(
+        '<div class="section-title">System Status</div>',
+        unsafe_allow_html=True,
+    )
+    status1, status2, status3 = st.columns(3)
+    with status1:
+        dot = (
+            '<span class="status-dot status-ready"></span>'
+            if artifacts_exist()
+            else '<span class="status-dot status-warn"></span>'
+        )
+        label = "Model Ready" if artifacts_exist() else "Model Unavailable"
+        st.markdown(f"{dot} **{label}**", unsafe_allow_html=True)
+    with status2:
+        dot = (
+            '<span class="status-dot status-ready"></span>'
+            if processed_data_exists()
+            else '<span class="status-dot status-warn"></span>'
+        )
+        label = "Preprocessing Ready" if processed_data_exists() else "Preprocessing Unavailable"
+        st.markdown(f"{dot} **{label}**", unsafe_allow_html=True)
+    with status3:
+        dot = (
+            '<span class="status-dot status-ready"></span>'
+            if artifacts_exist()
+            else '<span class="status-dot status-warn"></span>'
+        )
+        label = "Explainability Ready" if artifacts_exist() else "Explainability Unavailable"
+        st.markdown(f"{dot} **{label}**", unsafe_allow_html=True)
 
 
 def page_dataset_overview() -> None:
@@ -138,55 +517,65 @@ def page_dataset_overview() -> None:
     else:
         df_raw = st.session_state.df_raw
 
-    st.markdown("#### Raw Dataset")
-    st.dataframe(df_raw.head(100), use_container_width=True)
-    st.markdown(f"**Shape:** {df_raw.shape}")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("**Data Types**")
-        st.dataframe(df_raw.dtypes.to_frame(name="dtype"))
-    with col2:
-        st.markdown("**Missing Values**")
-        missing = df_raw.isnull().sum()
-        missing = missing[missing > 0]
-        if len(missing) > 0:
-            st.dataframe(missing.to_frame(name="count"))
-        else:
-            st.write("No missing values found.")
-
-    st.markdown("#### Class Balance")
-    target_counts = df_raw[TARGET_COLUMN].value_counts()
-    fig = px.bar(
-        x=target_counts.index.map({0: "Normal", 1: "Failure"}),
-        y=target_counts.values,
-        labels={"x": "Class", "y": "Count"},
-        color=target_counts.index.map({0: "Normal", 1: "Failure"}),
-        color_discrete_map={"Normal": "#00c853", "Failure": "#ff4b4b"},
+    tab1, tab2, tab3 = st.tabs(
+        ["Raw Data", "Data Types & Missing", "Class Balance"]
     )
-    fig.update_layout(template="plotly_dark", showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
+    with tab1:
+        st.markdown(
+            f"**Shape:** {df_raw.shape[0]} rows × {df_raw.shape[1]} columns"
+        )
+        st.dataframe(df_raw.head(100), use_container_width=True)
+        csv_bytes = df_raw.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="Download Raw Dataset as CSV",
+            data=csv_bytes,
+            file_name="ai4i2020_raw.csv",
+            mime="text/csv",
+        )
+    with tab2:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Data Types**")
+            st.dataframe(
+                df_raw.dtypes.to_frame(name="dtype"), use_container_width=True
+            )
+        with col2:
+            st.markdown("**Missing Values**")
+            missing = df_raw.isnull().sum()
+            missing = missing[missing > 0]
+            if len(missing) > 0:
+                st.dataframe(
+                    missing.to_frame(name="count"), use_container_width=True
+                )
+            else:
+                st.success("No missing values found.")
+    with tab3:
+        target_counts = df_raw[TARGET_COLUMN].value_counts()
+        fig = px.bar(
+            x=target_counts.index.map({0: "Normal", 1: "Failure"}),
+            y=target_counts.values,
+            labels={"x": "Class", "y": "Count"},
+            color=target_counts.index.map({0: "Normal", 1: "Failure"}),
+            color_discrete_map={"Normal": "#00c853", "Failure": "#ff4b4b"},
+        )
+        fig.update_layout(template="plotly_dark", showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("#### Processed Dataset")
-    if st.session_state.df_processed is None:
+    if processed_data_exists():
         try:
             X_train, y_train, X_test, y_test = load_processed_data()
-            st.session_state.df_processed = X_test.head(100)
+            st.markdown(
+                f"**Train shape:** {X_train.shape}  "
+                f"**Test shape:** {X_test.shape}"
+            )
+            st.dataframe(X_test.head(100), use_container_width=True)
         except Exception as e:
-            st.warning(f"Processed data not yet available. Train models first. Error: {e}")
-            return
+            st.warning(
+                f"Processed data not yet available. Train models first. Error: {e}"
+            )
     else:
-        X_test = st.session_state.df_processed
-
-    st.dataframe(X_test.head(100), use_container_width=True)
-
-    csv_bytes = df_raw.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="Download Raw Dataset as CSV",
-        data=csv_bytes,
-        file_name="ai4i2020_raw.csv",
-        mime="text/csv",
-    )
+        st.info("Processed data not yet available. Use Train Model to generate it.")
 
 
 def page_eda() -> None:
@@ -210,7 +599,9 @@ def page_eda() -> None:
         color="Machine failure",
         color_discrete_map={0: "#00c853", 1: "#ff4b4b"},
         template="plotly_dark",
+        title=f"Distribution of {selected_feature}",
     )
+    fig.update_layout(xaxis_title=selected_feature, yaxis_title="Count")
     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("#### Correlation Heatmap")
@@ -221,41 +612,62 @@ def page_eda() -> None:
         color_continuous_scale="RdBu_r",
         template="plotly_dark",
         aspect="auto",
+        title="Feature Correlation Matrix",
+        text_auto=".2f",
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("#### Box Plots by Machine Type")
-    fig = px.box(
-        df, x="Type", y="Process temperature [K]",
-        color="Type",
-        template="plotly_dark",
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("#### Box Plots by Machine Type")
+        fig = px.box(
+            df, x="Type", y="Process temperature [K]",
+            color="Type",
+            template="plotly_dark",
+            title="Process Temperature by Machine Type",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    with col2:
+        st.markdown("#### Torque vs RPM")
+        fig = px.scatter(
+            df, x="Rotational speed [rpm]", y="Torque [Nm]",
+            color="Machine failure",
+            color_discrete_map={0: "#00c853", 1: "#ff4b4b"},
+            template="plotly_dark",
+            opacity=0.5,
+            title="Torque vs Rotational Speed",
+        )
+        fig.update_layout(
+            xaxis_title="Rotational speed [rpm]", yaxis_title="Torque [Nm]"
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("#### Failure Type Distribution")
     failure_cols = ["TWF", "HDF", "PWF", "OSF", "RNF"]
-    failure_data = df[failure_cols].melt(var_name="Failure Type", value_name="Count")
+    failure_data = df[failure_cols].melt(
+        var_name="Failure Type", value_name="Count"
+    )
     fig = px.histogram(
         failure_data, x="Failure Type", color="Failure Type",
         template="plotly_dark",
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-    st.markdown("#### Torque vs RPM (colored by Failure)")
-    fig = px.scatter(
-        df, x="Rotational speed [rpm]", y="Torque [Nm]",
-        color="Machine failure",
-        color_discrete_map={0: "#00c853", 1: "#ff4b4b"},
-        template="plotly_dark",
-        opacity=0.5,
+        title="Failure Type Occurrences",
     )
     st.plotly_chart(fig, use_container_width=True)
 
 
 def page_train_model() -> None:
-    st.title("Train Model")
+    st.title("Model Training")
 
-    if st.button("Start Training", type="primary", use_container_width=True):
+    if artifacts_exist():
+        st.success("Pretrained model artifacts detected.")
+    else:
+        st.info("No pretrained artifacts found. Training will generate them.")
+
+    if not st.session_state.training_in_progress:
+        if st.button("🔄 Retrain Models", type="primary", use_container_width=True):
+            st.session_state.training_in_progress = True
+            st.rerun()
+    else:
         with st.status("Training models...", expanded=True) as status:
             try:
                 st.write("Loading and preprocessing data...")
@@ -270,7 +682,8 @@ def page_train_model() -> None:
                 st.session_state.preprocessor = results["preprocessor"]
                 st.session_state.models_trained = True
 
-                from src.evaluate import compare_models
+                st.cache_resource.clear()
+                st.cache_data.clear()
 
                 st.session_state.comparison_df = compare_models(
                     st.session_state.metrics
@@ -282,17 +695,111 @@ def page_train_model() -> None:
                 logger.error("Training failed: %s", exc)
                 st.error(f"Training failed: {exc}")
                 status.update(label="Training failed", state="error")
+            finally:
+                st.session_state.training_in_progress = False
 
-        if st.session_state.models_trained and st.session_state.comparison_df is not None:
+        if (
+            st.session_state.models_trained
+            and st.session_state.comparison_df is not None
+        ):
             st.markdown("#### Model Comparison")
             comp_df = st.session_state.comparison_df
-            st.dataframe(comp_df.style.highlight_max(subset=["roc_auc"], color="#00c853"))
+            styled = comp_df.copy()
+            styled.index.name = "Model"
+            styled = styled.reset_index()
+            styled["Model"] = styled["Model"].apply(
+                lambda m: f"⭐ {m.title()}" if m == "xgboost" else m.title()
+            )
+            st.dataframe(styled, use_container_width=True, hide_index=True)
+
+
+def _display_prediction_card(result: dict, threshold: float) -> None:
+    pred = result["prediction"]
+    prob = result["probability"]
+    risk = result["risk_level"]
+
+    label = "FAILURE" if pred == 1 else "NORMAL"
+    color = "#ff4b4b" if pred == 1 else "#00c853"
+
+    st.markdown(
+        f"""
+        <div class="prediction-card" style="border-left-color:{color};">
+            <div class="prob" style="color:{color};">{prob*100:.1f}%</div>
+            <div class="label" style="color:{color};">{label}</div>
+            <div class="meta">Risk Level: {risk} &nbsp;|&nbsp;
+                Threshold: {threshold:.2f}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.progress(prob, format=f"{prob*100:.1f}%")
+
+    if pred == 1:
+        st.info(
+            f"Model indicates elevated failure risk ({prob*100:.1f}%) "
+            f"above the decision threshold ({threshold:.2f})."
+        )
+        st.markdown(
+            """
+            <div class="action-box">
+                <div class="title">Recommended Action</div>
+                <div class="text">Schedule inspection or preventive maintenance
+                as soon as practical. This is a model indication, not a
+                guarantee of failure.</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.info(
+            f"Model indicates normal operation ({prob*100:.1f}%) "
+            f"below the decision threshold ({threshold:.2f})."
+        )
+        st.markdown(
+            """
+            <div class="action-box">
+                <div class="title">Recommended Action</div>
+                <div class="text">Continue monitoring according to the normal
+                maintenance schedule. This is a model indication, not a
+                guarantee of continued operation.</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def page_predict_failure() -> None:
     st.title("Predict Failure")
 
-    threshold = st.slider("Decision Threshold", 0.1, 0.9, 0.5, 0.05)
+    if not artifacts_exist():
+        _artifact_warning()
+        return
+
+    model, preprocessor = load_model_resource()
+
+    registry = load_registry_resource()
+    versions = registry.get("versions", {})
+    xgb_versions = {
+        k: v for k, v in versions.items() if v.get("model") == "xgboost"
+    }
+    recommended_threshold = 0.5
+    if xgb_versions:
+        latest_xgb = _latest_version_key(xgb_versions)
+        recommended_threshold = xgb_versions[latest_xgb].get("threshold", 0.5)
+
+    threshold = st.slider(
+        "Decision Threshold",
+        0.1,
+        0.9,
+        float(recommended_threshold),
+        0.05,
+        help=(
+            "The decision threshold determines when the model's risk score "
+            "is classified as a predicted failure. The recommended value is "
+            "loaded from the project's threshold optimization artifacts."
+        ),
+    )
 
     tab_a, tab_b = st.tabs(["Manual Input", "Batch CSV Upload"])
 
@@ -300,13 +807,21 @@ def page_predict_failure() -> None:
         st.markdown("#### Manual Prediction")
         col1, col2, col3 = st.columns(3)
         with col1:
-            air_temp = st.slider("Air Temperature [K]", 290.0, 320.0, 298.0, 1.0)
-            process_temp = st.slider("Process Temperature [K]", 300.0, 350.0, 310.0, 1.0)
-            rpm = st.slider("Rotational Speed [rpm]", 0.0, 3000.0, 1500.0, 10.0)
+            air_temp = st.slider(
+                "Air Temperature [K]", 290.0, 320.0, 298.0, 1.0
+            )
+            process_temp = st.slider(
+                "Process Temperature [K]", 300.0, 350.0, 310.0, 1.0
+            )
+            rpm = st.slider(
+                "Rotational Speed [rpm]", 0.0, 3000.0, 1500.0, 10.0
+            )
         with col2:
             torque = st.slider("Torque [Nm]", 0.0, 100.0, 40.0, 1.0)
             tool_wear = st.slider("Tool Wear [min]", 0.0, 300.0, 50.0, 1.0)
-            machine_type = st.selectbox("Machine Type", ["L", "M", "H"], index=1)
+            machine_type = st.selectbox(
+                "Machine Type", ["L", "M", "H"], index=1
+            )
         with col3:
             temp_diff = process_temp - air_temp
             power = torque * rpm * (2 * 3.141592653589793 / 60)
@@ -315,9 +830,11 @@ def page_predict_failure() -> None:
             temp_wear_inter = temp_diff * tool_wear
 
         st.markdown("**Derived Features:**")
-        st.write(f"Temperature Diff: {temp_diff:.2f} K | Power: {power:.2f} W")
-        st.write(f"Wear Rate: {wear_rate:.6f} | Torque Normalized: {torque_norm:.6f}")
-        st.write(f"Temp-Wear Interaction: {temp_wear_inter:.2f}")
+        st.write(
+            f"Temperature Diff: {temp_diff:.2f} K | Power: {power:.2f} W | "
+            f"Wear Rate: {wear_rate:.6f} | Torque Normalized: {torque_norm:.6f} | "
+            f"Temp-Wear Interaction: {temp_wear_inter:.2f}"
+        )
 
         if st.button("Predict", type="primary", use_container_width=True):
             input_dict = {
@@ -338,7 +855,8 @@ def page_predict_failure() -> None:
     with tab_b:
         st.markdown("#### Batch Prediction from CSV")
         uploaded_file = st.file_uploader(
-            "Upload CSV file", type=["csv"],
+            "Upload CSV file",
+            type=["csv"],
             help=(
                 "CSV must contain columns: Air temperature [K], "
                 "Process temperature [K], Rotational speed [rpm], "
@@ -350,94 +868,104 @@ def page_predict_failure() -> None:
                 df_upload = pd.read_csv(uploaded_file)
                 st.dataframe(df_upload.head(), use_container_width=True)
 
-                if st.button("Run Batch Predictions", type="primary"):
-                    with st.spinner("Running predictions..."):
-                        temp_path = Path("data/raw/_batch_upload.csv")
-                        df_upload.to_csv(temp_path, index=False)
-                        results_df = batch_predict(temp_path, threshold=threshold)
-                        os.remove(temp_path)
+                required_cols = [
+                    "Air temperature [K]",
+                    "Process temperature [K]",
+                    "Rotational speed [rpm]",
+                    "Torque [Nm]",
+                    "Tool wear [min]",
+                    "Type",
+                ]
+                missing_cols = [
+                    c for c in required_cols if c not in df_upload.columns
+                ]
+                if missing_cols:
+                    st.error(
+                        f"Uploaded CSV is missing required columns: "
+                        f"{', '.join(missing_cols)}"
+                    )
+                else:
+                    if st.button("Run Batch Predictions", type="primary"):
+                        with st.spinner("Running predictions..."):
+                            temp_path = Path("data/raw/_batch_upload.csv")
+                            temp_path.parent.mkdir(parents=True, exist_ok=True)
+                            df_upload.to_csv(temp_path, index=False)
+                            results_df = batch_predict(
+                                temp_path, threshold=threshold
+                            )
+                            os.remove(temp_path)
 
-                        st.dataframe(results_df, use_container_width=True)
+                            st.dataframe(
+                                results_df, use_container_width=True
+                            )
 
-                        csv_bytes = results_df.to_csv(index=False).encode("utf-8")
-                        st.download_button(
-                            label="Download Predictions",
-                            data=csv_bytes,
-                            file_name="predictions.csv",
-                            mime="text/csv",
-                        )
+                            csv_bytes = results_df.to_csv(
+                                index=False
+                            ).encode("utf-8")
+                            st.download_button(
+                                label="Download Predictions",
+                                data=csv_bytes,
+                                file_name="predictions.csv",
+                                mime="text/csv",
+                            )
             except Exception as exc:
                 st.error(f"Batch prediction failed: {exc}")
                 logger.error("Batch prediction error: %s", exc)
 
 
-def _display_prediction_card(result: dict, threshold: float) -> None:
-    pred = result["prediction"]
-    prob = result["probability"]
-    risk = result["risk_level"]
-
-    label = "FAILURE" if pred == 1 else "NORMAL"
-    color = "#ff4b4b" if pred == 1 else "#00c853"
-
-    st.markdown(f"""
-    <div style="background:#1c1e26;border-radius:12px;padding:20px;margin:10px 0;
-    border-left:5px solid {color};">
-        <h2 style="color:{color};margin:0;">Prediction: {label}</h2>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown(card_html("Failure Probability", f"{prob*100:.1f}%", color))
-    with col2:
-        st.markdown(card_html("Risk Level", risk, "#ffab00" if risk == "Medium" else color))
-    with col3:
-        st.markdown(card_html("Threshold", f"{threshold:.2f}", "#00d4ff"))
-
-    st.progress(prob, format=f"{prob*100:.1f}%")
-
-
 def page_explain_prediction() -> None:
     st.title("Explain Prediction")
 
-    if not st.session_state.models_trained:
-        st.warning("Please train models first from the Train Model page.")
+    if not artifacts_exist():
+        _artifact_warning()
+        return
+
+    model, preprocessor = load_model_resource()
+
+    if not processed_data_exists():
+        st.warning("Processed data not found. Train models first.")
+        return
+
+    try:
+        X_train, y_train, X_test, y_test = load_processed_data()
+    except Exception as exc:
+        st.error(f"Failed to load processed data: {exc}")
         return
 
     st.markdown("#### SHAP Analysis")
 
     try:
-        model = st.session_state.models.get("xgboost")
-        X_test = st.session_state.X_test
-        if model is None or X_test is None:
-            st.warning("Model or test data not available.")
-            return
-
         explainer = get_shap_explainer(model)
         if explainer is None:
-            st.error("Failed to create SHAP explainer.")
+            st.error("SHAP explainer is unavailable for this model artifact.")
             return
 
         idx = st.slider("Sample Index", 0, len(X_test) - 1, 0)
 
         col1, col2 = st.columns(2)
         with col1:
-            waterfall_path = Path("reports/figures/shap_waterfall.png")
+            waterfall_path = FIGURES_DIR / "shap_waterfall.png"
             shap_waterfall_plot(explainer, X_test, idx, waterfall_path)
             if waterfall_path.exists():
-                st.image(str(waterfall_path), caption="SHAP Waterfall Plot")
-
+                st.image(
+                    str(waterfall_path), caption="SHAP Waterfall Plot"
+                )
         with col2:
-            force_path = Path("reports/figures/shap_force.html")
+            force_path = FIGURES_DIR / "shap_force.html"
             shap_force_plot_html(explainer, X_test, idx, force_path)
-            st.markdown(f"SHAP Force plot saved to `{force_path}`")
+            if force_path.exists():
+                st.info(
+                    "SHAP Force plot saved to `{}`. "
+                    "Download from Reports if needed.".format(force_path)
+                )
+            else:
+                st.warning("SHAP Force plot could not be generated.")
 
         top_features = get_top_features_shap(explainer, X_test, top_n=5)
         st.markdown(f"**Top 5 Features:** {', '.join(top_features)}")
 
         dep_paths = shap_dependence_plots(
-            explainer, X_test, top_features,
-            Path("reports/figures")
+            explainer, X_test, top_features, FIGURES_DIR
         )
         for p in dep_paths:
             if p.exists():
@@ -447,37 +975,53 @@ def page_explain_prediction() -> None:
         logger.error("SHAP explanation error: %s", exc)
         st.error(f"SHAP explanation failed: {exc}")
 
+    st.markdown(
+        "Positive SHAP values push the prediction toward failure, while "
+        "negative values push it toward normal operation."
+    )
+
     st.markdown("#### LIME Analysis")
     try:
-        model = st.session_state.models.get("xgboost")
-        X_test = st.session_state.X_test
-        if model is None or X_test is None:
-            st.warning("Model or test data not available for LIME.")
-        else:
-            lime_result = lime_explain(
-                model, X_test, X_test,
-                idx=st.session_state.get("selected_idx", 0)
+        lime_idx = st.slider(
+            "LIME Sample Index", 0, len(X_test) - 1, 0, key="lime_idx"
+        )
+        lime_result = lime_explain(model, X_train, X_test, idx=lime_idx)
+        if lime_result:
+            lime_df = pd.DataFrame(
+                list(lime_result.items()),
+                columns=["Feature", "Contribution"],
             )
-            if lime_result:
-                lime_df = pd.DataFrame(
-                    list(lime_result.items()), columns=["Feature", "Contribution"]
-                )
-                lime_df = lime_df.sort_values("Contribution", key=abs, ascending=False)
-                fig = px.bar(
-                    lime_df.head(10), x="Contribution", y="Feature",
-                    orientation="h", template="plotly_dark",
-                    color="Contribution",
-                    color_continuous_scale="RdBu_r",
-                )
-                st.plotly_chart(fig, use_container_width=True)
+            lime_df = lime_df.sort_values(
+                "Contribution", key=abs, ascending=False
+            )
+            fig = px.bar(
+                lime_df.head(10),
+                x="Contribution",
+                y="Feature",
+                orientation="h",
+                template="plotly_dark",
+                color="Contribution",
+                color_continuous_scale="RdBu_r",
+                title="LIME Feature Contributions",
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
-                top_pos = lime_df.iloc[0]
-                direction = "UP" if top_pos["Contribution"] > 0 else "DOWN"
-                st.info(
-                    f"The top factor contributing to this prediction was "
-                    f"**{top_pos['Feature']}**, which pushed the risk {direction} "
-                    f"by {abs(top_pos['Contribution']):.4f}."
-                )
+            top_pos = lime_df.iloc[0]
+            direction = (
+                "positively"
+                if top_pos["Contribution"] > 0
+                else "negatively"
+            )
+            st.info(
+                f"The top factor contributing to this model prediction was "
+                f"**{top_pos['Feature']}**, which pushed the prediction "
+                f"{direction} by {abs(top_pos['Contribution']):.4f}. "
+                f"This is a model explanation, not a causal claim."
+            )
+        else:
+            st.warning(
+                "LIME explanation returned no contributions for this sample."
+            )
     except Exception as exc:
         logger.error("LIME explanation error: %s", exc)
         st.error(f"LIME explanation failed: {exc}")
@@ -486,84 +1030,386 @@ def page_explain_prediction() -> None:
 def page_performance_metrics() -> None:
     st.title("Performance Metrics")
 
-    if not st.session_state.models_trained:
-        st.warning("Please train models first.")
+    if not artifacts_exist():
+        _artifact_warning()
         return
 
-    model_name = st.selectbox(
-        "Select Model",
-        list(st.session_state.metrics.keys()),
-        index=0,
-    )
+    registry = load_registry_resource()
+    versions = registry.get("versions", {})
+    if not versions:
+        st.warning("Model registry is empty. Train models first.")
+        return
 
-    metrics = st.session_state.metrics.get(model_name, {})
+    model_names = sorted({v.get("model") for v in versions.values()})
+    selected_model = st.selectbox("Select Model", model_names, index=0)
+
+    model_versions = {
+        k: v for k, v in versions.items() if v.get("model") == selected_model
+    }
+    if not model_versions:
+        st.warning(f"No versions found for {selected_model}.")
+        return
+
+    latest_key = _latest_version_key(model_versions)
+    latest_entry = model_versions[latest_key]
+    metrics = latest_entry.get("metrics", {})
+
     if metrics:
         col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
-            st.markdown(card_html("Accuracy", f"{metrics.get('accuracy', 0):.4f}", "#00d4ff"))
+            st.markdown(
+                card_html(
+                    "Accuracy",
+                    f"{metrics.get('accuracy', 0):.4f}",
+                    "#00d4ff",
+                ),
+                unsafe_allow_html=True,
+            )
         with col2:
-            st.markdown(card_html("Precision", f"{metrics.get('precision', 0):.4f}", "#00c853"))
+            st.markdown(
+                card_html(
+                    "Precision",
+                    f"{metrics.get('precision', 0):.4f}",
+                    "#00c853",
+                ),
+                unsafe_allow_html=True,
+            )
         with col3:
-            st.markdown(card_html("Recall", f"{metrics.get('recall', 0):.4f}", "#ffab00"))
+            st.markdown(
+                card_html(
+                    "Recall",
+                    f"{metrics.get('recall', 0):.4f}",
+                    "#ffab00",
+                ),
+                unsafe_allow_html=True,
+            )
         with col4:
-            st.markdown(card_html("F1", f"{metrics.get('f1', 0):.4f}", "#00d4ff"))
+            st.markdown(
+                card_html("F1", f"{metrics.get('f1', 0):.4f}", "#00d4ff"),
+                unsafe_allow_html=True,
+            )
         with col5:
-            st.markdown(card_html("ROC-AUC", f"{metrics.get('roc_auc', 0):.4f}", "#00c853"))
+            st.markdown(
+                card_html(
+                    "ROC-AUC",
+                    f"{metrics.get('roc_auc', 0):.4f}",
+                    "#00c853",
+                ),
+                unsafe_allow_html=True,
+            )
 
-    y_test = st.session_state.y_test
-    y_prob = st.session_state.models.get(model_name).predict_proba(st.session_state.X_test)[:, 1]
+    st.markdown("#### Model Comparison")
+    comp_path = RESULTS_DIR / "model_comparison.csv"
+    if comp_path.exists():
+        comp_df = pd.read_csv(comp_path, index_col=0)
+        styled = comp_df.copy()
+        styled.index.name = "Model"
+        styled = styled.reset_index()
+        styled["Model"] = styled["Model"].apply(
+            lambda m: f"⭐ {m.title()}" if m == "xgboost" else m.title()
+        )
+        st.dataframe(styled, use_container_width=True, hide_index=True)
+    else:
+        st.info("Model comparison CSV not found. Run evaluation to generate it.")
 
-    cm_path = RESULTS_DIR / f"confusion_matrix_{model_name}.png"
-    if cm_path.exists():
-        st.image(str(cm_path), caption=f"Confusion Matrix — {model_name}")
+    st.markdown("#### Confusion Matrices")
+    cm_cols = st.columns(2)
+    for i, model_name in enumerate(model_names[:4]):
+        cm_path = FIGURES_DIR / f"confusion_matrix_{model_name}.png"
+        if cm_path.exists():
+            with cm_cols[i % 2]:
+                st.image(
+                    str(cm_path),
+                    caption=f"Confusion Matrix — {model_name}",
+                )
 
-    roc_path = RESULTS_DIR / "roc_curve.html"
-    if roc_path.exists():
-        with open(roc_path, "r") as f:
-            roc_html = f.read()
-        st.components.v1.html(roc_html, height=500)
+    st.markdown("#### ROC & PR Curves")
+    tab1, tab2 = st.tabs(["ROC Curve", "Precision-Recall Curve"])
+    with tab1:
+        roc_path = RESULTS_DIR / "roc_curve.html"
+        if roc_path.exists():
+            with open(roc_path, "r") as f:
+                roc_html = f.read()
+            st.components.v1.html(roc_html, height=500)
+        else:
+            st.info("ROC curve HTML not found.")
+    with tab2:
+        pr_path = RESULTS_DIR / "pr_curve.html"
+        if pr_path.exists():
+            with open(pr_path, "r") as f:
+                pr_html = f.read()
+            st.components.v1.html(pr_html, height=500)
+        else:
+            st.info("Precision-recall curve HTML not found.")
 
-    pr_path = RESULTS_DIR / "pr_curve.html"
-    if pr_path.exists():
-        with open(pr_path, "r") as f:
-            pr_html = f.read()
-        st.components.v1.html(pr_html, height=500)
+    st.markdown("#### Classification Report")
+    report_path = RESULTS_DIR / "classification_report.txt"
+    if report_path.exists():
+        with open(report_path, "r") as f:
+            report_text = f.read()
+        st.text(report_text)
+    else:
+        st.info("Classification report not found.")
 
-    thresholds = np.arange(0.1, 0.95, 0.05)
-    f1_scores = []
-    for t in thresholds:
-        y_t = (y_prob >= t).astype(int)
-        f1_scores.append(f1_score(y_test, y_t, zero_division=0))
+    st.markdown("#### Threshold Analysis")
+    thresh_path = FIGURES_DIR / "threshold_analysis.html"
+    if thresh_path.exists():
+        with open(thresh_path, "r") as f:
+            thresh_html = f.read()
+        st.components.v1.html(thresh_html, height=500)
+    else:
+        st.info("Threshold analysis HTML not found.")
 
-    fig = px.line(
-        x=thresholds, y=f1_scores,
-        labels={"x": "Threshold", "y": "F1 Score"},
-        template="plotly_dark",
+
+def page_threshold_optimization() -> None:
+    st.title("Threshold Optimization")
+
+    if not artifacts_exist():
+        _artifact_warning()
+        return
+
+    if not processed_data_exists():
+        st.warning("Processed data not found. Train models first.")
+        return
+
+    try:
+        X_train, y_train, X_test, y_test = load_processed_data()
+    except Exception as exc:
+        st.error(f"Failed to load processed data: {exc}")
+        return
+
+    model, _ = load_model_resource()
+
+    y_prob = model.predict_proba(X_test)[:, 1]
+
+    registry = load_registry_resource()
+    versions = registry.get("versions", {})
+    xgb_versions = {
+        k: v for k, v in versions.items() if v.get("model") == "xgboost"
+    }
+    recommended_threshold = 0.5
+    if xgb_versions:
+        latest_xgb = _latest_version_key(xgb_versions)
+        recommended_threshold = xgb_versions[latest_xgb].get("threshold", 0.5)
+
+    st.markdown(
+        "Adjust the decision threshold and observe its effect on "
+        "precision, recall, F1, and error counts."
     )
-    st.plotly_chart(fig, use_container_width=True)
+    threshold = st.slider(
+        "Decision Threshold",
+        0.05,
+        0.95,
+        float(recommended_threshold),
+        0.01,
+    )
+
+    y_pred = (y_prob >= threshold).astype(int)
+
+    tp = int(((y_test == 1) & (y_pred == 1)).sum())
+    fp = int(((y_test == 0) & (y_pred == 1)).sum())
+    fn = int(((y_test == 1) & (y_pred == 0)).sum())
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = (
+        2 * precision * recall / (precision + recall)
+        if (precision + recall) > 0
+        else 0.0
+    )
+
+    st.markdown(
+        '<div class="section-title">At This Threshold</div>',
+        unsafe_allow_html=True,
+    )
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        st.markdown(
+            card_html("Precision", f"{precision:.4f}", "#00c853"),
+            unsafe_allow_html=True,
+        )
+    with m2:
+        st.markdown(
+            card_html("Recall", f"{recall:.4f}", "#ffab00"),
+            unsafe_allow_html=True,
+        )
+    with m3:
+        st.markdown(
+            card_html("F1", f"{f1:.4f}", "#00d4ff"),
+            unsafe_allow_html=True,
+        )
+    with m4:
+        st.markdown(
+            card_html(
+                "ROC-AUC",
+                f"{load_xgboost_metrics().get('roc_auc', 0):.4f}"
+                if load_xgboost_metrics()
+                else "N/A",
+                "#ff4b4b",
+            ),
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        '<div class="section-title">Error Analysis</div>',
+        unsafe_allow_html=True,
+    )
+    e1, e2, e3 = st.columns(3)
+    with e1:
+        st.markdown(
+            card_html("Predicted Failures", str(tp + fp), "#00d4ff"),
+            unsafe_allow_html=True,
+        )
+    with e2:
+        st.markdown(
+            card_html("False Positives", str(fp), "#ffab00"),
+            unsafe_allow_html=True,
+        )
+    with e3:
+        st.markdown(
+            card_html("False Negatives", str(fn), "#ff4b4b"),
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        '<div class="section-title">Tradeoff</div>',
+        unsafe_allow_html=True,
+    )
+    st.info(
+        "Lower thresholds generally identify more potential failures "
+        "but may increase false alarms. Higher thresholds reduce false "
+        "alarms but may miss some failures."
+    )
 
 
 def page_download_reports() -> None:
-    st.title("Download Reports")
+    st.title("Reports & Downloads")
 
+    st.markdown("#### Evaluation Reports")
+    col1, col2 = st.columns(2)
+    with col1:
+        roc_path = RESULTS_DIR / "roc_curve.html"
+        if roc_path.exists():
+            with open(roc_path, "rb") as f:
+                st.download_button(
+                    label="Download ROC Curve",
+                    data=f.read(),
+                    file_name="roc_curve.html",
+                    mime="text/html",
+                )
+        pr_path = RESULTS_DIR / "pr_curve.html"
+        if pr_path.exists():
+            with open(pr_path, "rb") as f:
+                st.download_button(
+                    label="Download Precision-Recall Curve",
+                    data=f.read(),
+                    file_name="pr_curve.html",
+                    mime="text/html",
+                )
+    with col2:
+        thresh_path = FIGURES_DIR / "threshold_analysis.html"
+        if thresh_path.exists():
+            with open(thresh_path, "rb") as f:
+                st.download_button(
+                    label="Download Threshold Analysis",
+                    data=f.read(),
+                    file_name="threshold_analysis.html",
+                    mime="text/html",
+                )
+        report_path = RESULTS_DIR / "classification_report.txt"
+        if report_path.exists():
+            with open(report_path, "rb") as f:
+                st.download_button(
+                    label="Download Classification Report",
+                    data=f.read(),
+                    file_name="classification_report.txt",
+                    mime="text/plain",
+                )
+
+    st.markdown("#### Model Artifacts")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if XGBoost_MODEL_PATH.exists():
+            with open(XGBoost_MODEL_PATH, "rb") as f:
+                st.download_button(
+                    label="Download Trained Model (.pkl)",
+                    data=f.read(),
+                    file_name="xgboost_model.pkl",
+                    mime="application/octet-stream",
+                )
+    with col2:
+        if SCALER_PATH.exists():
+            with open(SCALER_PATH, "rb") as f:
+                st.download_button(
+                    label="Download Scaler (.pkl)",
+                    data=f.read(),
+                    file_name="scaler.pkl",
+                    mime="application/octet-stream",
+                )
+    with col3:
+        if MODEL_REGISTRY_PATH.exists():
+            with open(MODEL_REGISTRY_PATH, "rb") as f:
+                st.download_button(
+                    label="Download Model Registry (.json)",
+                    data=f.read(),
+                    file_name="model_registry.json",
+                    mime="application/json",
+                )
+
+    st.markdown("#### Additional Artifacts")
+    col1, col2 = st.columns(2)
+    with col1:
+        if (RESULTS_DIR / "model_comparison.csv").exists():
+            with open(RESULTS_DIR / "model_comparison.csv", "rb") as f:
+                st.download_button(
+                    label="Download Model Comparison",
+                    data=f.read(),
+                    file_name="model_comparison.csv",
+                    mime="text/csv",
+                )
+    with col2:
+        shap_png = FIGURES_DIR / "shap_summary.png"
+        if shap_png.exists():
+            with open(shap_png, "rb") as f:
+                st.download_button(
+                    label="Download SHAP Summary PNG",
+                    data=f.read(),
+                    file_name="shap_summary.png",
+                    mime="image/png",
+                )
+
+    st.markdown("#### PDF Report")
     if st.button("Generate PDF Report", type="primary", use_container_width=True):
         try:
-            from src.utils import generate_report
+            registry = load_registry_resource()
+            versions = registry.get("versions", {})
+            latest_key = _latest_version_key(versions)
+            latest_metrics = (
+                versions[latest_key].get("metrics", {})
+                if latest_key
+                else {}
+            )
 
             sections = [
                 {
                     "heading": "Model Summary",
-                    "lines": ["Primary Model: XGBoost", "Random Seed: 42"],
+                    "lines": [
+                        "Primary Model: XGBoost",
+                        f"Registry Versions: {len(versions)}",
+                        "Random Seed: 42",
+                    ],
                 },
                 {
-                    "heading": "Metrics",
+                    "heading": "Latest Metrics",
                     "lines": [
-                        f"{k}: {v}" for k, v in st.session_state.metrics.get("xgboost", {}).items()
+                        f"{k}: {v}" for k, v in latest_metrics.items()
                     ],
                 },
             ]
             pdf_path = RESULTS_DIR / "prediction_report.pdf"
-            generate_report("Predictive Maintenance Report", sections, pdf_path)
+            generate_report(
+                "Predictive Maintenance Report", sections, pdf_path
+            )
             st.success(f"Report generated: {pdf_path}")
 
             with open(pdf_path, "rb") as f:
@@ -577,48 +1423,10 @@ def page_download_reports() -> None:
             st.error(f"Report generation failed: {exc}")
             logger.error("PDF report error: %s", exc)
 
-    st.markdown("#### Export Data")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.session_state.models_trained and st.session_state.X_test is not None:
-            model = st.session_state.models.get("xgboost")
-            if model is not None:
-                X_test = st.session_state.X_test
-                y_prob = model.predict_proba(X_test)[:, 1]
-                pred_df = pd.DataFrame({
-                    "prediction": model.predict(X_test),
-                    "probability": y_prob,
-                })
-                csv_bytes = pred_df.to_csv(index=False).encode("utf-8")
-                st.download_button(
-                    label="Download Predictions CSV",
-                    data=csv_bytes,
-                    file_name="predictions.csv",
-                    mime="text/csv",
-                )
 
-    with col2:
-        model_path = XGBoost_MODEL_PATH
-        if model_path.exists():
-            with open(model_path, "rb") as f:
-                st.download_button(
-                    label="Download Trained Model (.pkl)",
-                    data=f.read(),
-                    file_name="xgboost_model.pkl",
-                    mime="application/octet-stream",
-                )
-
-        shap_png = Path("reports/figures/shap_summary.png")
-        if shap_png.exists():
-            with open(shap_png, "rb") as f:
-                st.download_button(
-                    label="Download SHAP Summary PNG",
-                    data=f.read(),
-                    file_name="shap_summary.png",
-                    mime="image/png",
-                )
-
-
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 def main() -> None:
     st.set_page_config(
         page_title="Predictive Maintenance XAI",
@@ -629,19 +1437,92 @@ def main() -> None:
 
     _init_session_state()
 
-    page = st.sidebar.radio(
-        "Navigation",
-        [
-            "Home",
-            "Dataset Overview",
-            "Exploratory Data Analysis",
-            "Train Model",
-            "Predict Failure",
-            "Explain Prediction",
-            "Performance Metrics",
-            "Download Reports",
-        ],
-    )
+    with st.sidebar:
+        st.markdown("## Predictive Maintenance")
+        st.markdown("---")
+
+        st.markdown(
+            '<div class="sidebar-section">'
+            '<div class="section-header">Overview</div>',
+            unsafe_allow_html=True,
+        )
+        page_home_btn = st.button("🏠 Home", use_container_width=True)
+
+        st.markdown(
+            '<div class="sidebar-section">'
+            '<div class="section-header">Data</div>',
+            unsafe_allow_html=True,
+        )
+        page_dataset_btn = st.button(
+            "📊 Dataset Overview", use_container_width=True
+        )
+        page_eda_btn = st.button(
+            "📈 Exploratory Data Analysis", use_container_width=True
+        )
+
+        st.markdown(
+            '<div class="sidebar-section">'
+            '<div class="section-header">Prediction</div>',
+            unsafe_allow_html=True,
+        )
+        page_predict_btn = st.button(
+            "⚡ Predict Failure", type="primary", use_container_width=True
+        )
+        page_explain_btn = st.button(
+            "🔎 Explain Prediction", use_container_width=True
+        )
+
+        st.markdown(
+            '<div class="sidebar-section">'
+            '<div class="section-header">Evaluation</div>',
+            unsafe_allow_html=True,
+        )
+        page_metrics_btn = st.button(
+            "📉 Performance Metrics", use_container_width=True
+        )
+        page_threshold_btn = st.button(
+            "🎚️ Threshold Optimization", use_container_width=True
+        )
+
+        st.markdown(
+            '<div class="sidebar-section">'
+            '<div class="section-header">Reports</div>',
+            unsafe_allow_html=True,
+        )
+        page_reports_btn = st.button(
+            "📄 Reports & Downloads", use_container_width=True
+        )
+
+        st.markdown("---")
+        st.markdown(
+            '<div class="sidebar-section">'
+            '<div class="section-header">Administration</div>',
+            unsafe_allow_html=True,
+        )
+        page_train_btn = st.button(
+            "⚙️ Model Training", use_container_width=True
+        )
+
+    if page_home_btn:
+        st.session_state["page"] = "Home"
+    elif page_dataset_btn:
+        st.session_state["page"] = "Dataset Overview"
+    elif page_eda_btn:
+        st.session_state["page"] = "Exploratory Data Analysis"
+    elif page_predict_btn:
+        st.session_state["page"] = "Predict Failure"
+    elif page_explain_btn:
+        st.session_state["page"] = "Explain Prediction"
+    elif page_metrics_btn:
+        st.session_state["page"] = "Performance Metrics"
+    elif page_threshold_btn:
+        st.session_state["page"] = "Threshold Optimization"
+    elif page_reports_btn:
+        st.session_state["page"] = "Reports & Downloads"
+    elif page_train_btn:
+        st.session_state["page"] = "Model Training"
+
+    page = st.session_state.get("page", "Home")
 
     if page == "Home":
         page_home()
@@ -649,7 +1530,7 @@ def main() -> None:
         page_dataset_overview()
     elif page == "Exploratory Data Analysis":
         page_eda()
-    elif page == "Train Model":
+    elif page == "Model Training":
         page_train_model()
     elif page == "Predict Failure":
         page_predict_failure()
@@ -657,7 +1538,9 @@ def main() -> None:
         page_explain_prediction()
     elif page == "Performance Metrics":
         page_performance_metrics()
-    elif page == "Download Reports":
+    elif page == "Threshold Optimization":
+        page_threshold_optimization()
+    elif page == "Reports & Downloads":
         page_download_reports()
 
 

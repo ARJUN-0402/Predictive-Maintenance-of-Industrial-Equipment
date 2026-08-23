@@ -1,3 +1,4 @@
+import json
 import logging
 import sys
 
@@ -6,6 +7,8 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from sklearn.metrics import f1_score, precision_score, recall_score
+
+from src.config import FIGURES_DIR, MODEL_REGISTRY_PATH
 
 logger = logging.getLogger("threshold_optimization")
 
@@ -97,8 +100,8 @@ def optimize_threshold(
         yaxis_title="Precision",
         template="plotly_dark",
     )
-    fig.write_html("reports/figures/precision_recall_curve.html")
-    logger.info("Saved precision-recall curve to reports/figures/precision_recall_curve.html")
+    fig.write_html(str(FIGURES_DIR / "precision_recall_curve.html"))
+    logger.info("Saved precision-recall curve to %s", FIGURES_DIR / "precision_recall_curve.html")
 
     fig2 = go.Figure()
     fnpr = [100 * fn / (fn + tp + 1e-10) for fn, tp in zip(fn_vals, tp_vals)]
@@ -144,8 +147,8 @@ def optimize_threshold(
         template="plotly_dark",
         legend=dict(x=0.02, y=0.98),
     )
-    fig2.write_html("reports/figures/threshold_analysis.html")
-    logger.info("Saved threshold analysis to reports/figures/threshold_analysis.html")
+    fig2.write_html(str(FIGURES_DIR / "threshold_analysis.html"))
+    logger.info("Saved threshold analysis to %s", FIGURES_DIR / "threshold_analysis.html")
 
     return {
         "best_threshold": best_threshold,
@@ -223,6 +226,43 @@ def recommend_threshold_for_recall(
     }
 
 
+def _persist_thresholds(
+    f1_result: dict,
+    recall_result: dict,
+) -> None:
+    try:
+        if not MODEL_REGISTRY_PATH.exists():
+            return
+        with open(MODEL_REGISTRY_PATH, "r") as f:
+            registry = json.load(f)
+        versions = registry.get("versions", {})
+        xgb_versions = {
+            k: v for k, v in versions.items() if v.get("model") == "xgboost"
+        }
+        if not xgb_versions:
+            return
+        latest_key = sorted(xgb_versions.keys())[-1]
+        versions[latest_key]["thresholds"] = {
+            "f1_maximizing": {
+                "threshold": f1_result["best_threshold"],
+                "precision": f1_result["best_precision"],
+                "recall": f1_result["best_recall"],
+                "f1": f1_result["best_f1"],
+            },
+            "recall_oriented": {
+                "threshold": recall_result["threshold"],
+                "precision": recall_result["precision"],
+                "recall": recall_result["recall"],
+                "f1": recall_result["f1"],
+            },
+        }
+        with open(MODEL_REGISTRY_PATH, "w") as f:
+            json.dump(registry, f, indent=2)
+        logger.info("Persisted thresholds to model registry")
+    except Exception as exc:
+        logger.error("Failed to persist thresholds: %s", exc)
+
+
 def main() -> int:
     """CLI entry point: train models and run threshold optimization.
 
@@ -267,6 +307,8 @@ def main() -> int:
         print(f"  Precision:            {rec_result['precision']:.4f}")
         print(f"  F1:                   {rec_result['f1']:.4f}")
         print()
+
+        _persist_thresholds(result, rec_result)
 
         logger.info("=== Threshold reports saved to reports/figures/ ===")
         return 0

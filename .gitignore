@@ -1,7 +1,5 @@
 __pycache__/
 *.pyc
-*.pkl
-*.pkl.*
 venv/
 .venv/
 .env
@@ -14,12 +12,7 @@ build/
 data/raw/*.zip
 data/raw/*.csv
 !data/raw/.gitkeep
-data/processed/
-models/
-reports/figures/
-reports/results/
 notebooks/
-.streamlit/
 .stcache
 .DS_Store
 Thumbs.db
