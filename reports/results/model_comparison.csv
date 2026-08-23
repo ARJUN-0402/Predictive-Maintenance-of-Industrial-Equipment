@@ -1,5 +1,5 @@
 ,accuracy,precision,recall,f1,roc_auc
-xgboost,0.984,0.7308,0.8382,0.7808,0.9833
-random_forest,0.988,0.8548,0.7794,0.8154,0.9778
-gradient_boosting,0.99,0.9138,0.7794,0.8413,0.9754
-logistic_regression,0.873,0.1921,0.8529,0.3135,0.9384
+xgboost,0.47,0.4787,0.4412,0.4592,0.4673
+random_forest,0.47,0.4787,0.4412,0.4592,0.4673
+gradient_boosting,0.47,0.4787,0.4412,0.4592,0.4673
+logistic_regression,0.47,0.4787,0.4412,0.4592,0.4673

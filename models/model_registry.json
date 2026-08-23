@@ -9321,6 +9321,174 @@
         "f1": 0.31351351351351353,
         "roc_auc": 0.9384286323224942
       }
+    },
+    "v566": {
+      "version": "v566",
+      "timestamp": "2026-08-23T20:27:03.187525",
+      "model": "xgboost",
+      "best_params": {
+        "learning_rate": 0.1,
+        "max_depth": 3,
+        "n_estimators": 100,
+        "scale_pos_weight": 5,
+        "subsample": 1.0
+      },
+      "metrics": {
+        "accuracy": 0.984,
+        "precision": 0.7307692307692307,
+        "recall": 0.8382352941176471,
+        "f1": 0.7808219178082192,
+        "roc_auc": 0.9832846181951042
+      }
+    },
+    "v567": {
+      "version": "v567",
+      "timestamp": "2026-08-23T20:27:04.037124",
+      "model": "random_forest",
+      "best_params": {
+        "n_estimators": 200,
+        "class_weight": "balanced"
+      },
+      "metrics": {
+        "accuracy": 0.988,
+        "precision": 0.8548387096774194,
+        "recall": 0.7794117647058824,
+        "f1": 0.8153846153846154,
+        "roc_auc": 0.9777965534039702
+      }
+    },
+    "v568": {
+      "version": "v568",
+      "timestamp": "2026-08-23T20:27:07.408539",
+      "model": "gradient_boosting",
+      "best_params": {
+        "n_estimators": 200
+      },
+      "metrics": {
+        "accuracy": 0.99,
+        "precision": 0.9137931034482759,
+        "recall": 0.7794117647058824,
+        "f1": 0.8412698412698413,
+        "roc_auc": 0.9753760199732067
+      }
+    },
+    "v569": {
+      "version": "v569",
+      "timestamp": "2026-08-23T20:27:07.521095",
+      "model": "logistic_regression",
+      "best_params": {
+        "class_weight": "balanced"
+      },
+      "metrics": {
+        "accuracy": 0.873,
+        "precision": 0.19205298013245034,
+        "recall": 0.8529411764705882,
+        "f1": 0.31351351351351353,
+        "roc_auc": 0.9384286323224942
+      }
+    },
+    "v570": {
+      "version": "v570",
+      "timestamp": "2026-08-23T20:27:24.260830",
+      "model": "xgboost",
+      "best_params": {
+        "learning_rate": 0.1,
+        "max_depth": 3,
+        "n_estimators": 100,
+        "scale_pos_weight": 5,
+        "subsample": 1.0
+      },
+      "metrics": {
+        "accuracy": 0.984,
+        "precision": 0.7307692307692307,
+        "recall": 0.8382352941176471,
+        "f1": 0.7808219178082192,
+        "roc_auc": 0.9832846181951042
+      }
+    },
+    "v571": {
+      "version": "v571",
+      "timestamp": "2026-08-23T20:43:46.697846",
+      "model": "xgboost",
+      "best_params": {
+        "learning_rate": 0.1,
+        "max_depth": 3,
+        "n_estimators": 100,
+        "scale_pos_weight": 5,
+        "subsample": 1.0
+      },
+      "metrics": {
+        "accuracy": 0.984,
+        "precision": 0.7307692307692307,
+        "recall": 0.8382352941176471,
+        "f1": 0.7808219178082192,
+        "roc_auc": 0.9832846181951042
+      }
+    },
+    "v572": {
+      "version": "v572",
+      "timestamp": "2026-08-23T20:43:47.590707",
+      "model": "random_forest",
+      "best_params": {
+        "n_estimators": 200,
+        "class_weight": "balanced"
+      },
+      "metrics": {
+        "accuracy": 0.988,
+        "precision": 0.8548387096774194,
+        "recall": 0.7794117647058824,
+        "f1": 0.8153846153846154,
+        "roc_auc": 0.9777965534039702
+      }
+    },
+    "v573": {
+      "version": "v573",
+      "timestamp": "2026-08-23T20:43:51.403394",
+      "model": "gradient_boosting",
+      "best_params": {
+        "n_estimators": 200
+      },
+      "metrics": {
+        "accuracy": 0.99,
+        "precision": 0.9137931034482759,
+        "recall": 0.7794117647058824,
+        "f1": 0.8412698412698413,
+        "roc_auc": 0.9753760199732067
+      }
+    },
+    "v574": {
+      "version": "v574",
+      "timestamp": "2026-08-23T20:43:51.537768",
+      "model": "logistic_regression",
+      "best_params": {
+        "class_weight": "balanced"
+      },
+      "metrics": {
+        "accuracy": 0.873,
+        "precision": 0.19205298013245034,
+        "recall": 0.8529411764705882,
+        "f1": 0.31351351351351353,
+        "roc_auc": 0.9384286323224942
+      }
+    },
+    "v575": {
+      "version": "v575",
+      "timestamp": "2026-08-23T20:44:10.477327",
+      "model": "xgboost",
+      "best_params": {
+        "learning_rate": 0.1,
+        "max_depth": 3,
+        "n_estimators": 100,
+        "scale_pos_weight": 5,
+        "subsample": 1.0
+      },
+      "metrics": {
+        "accuracy": 0.984,
+        "precision": 0.7307692307692307,
+        "recall": 0.8382352941176471,
+        "f1": 0.7808219178082192,
+        "roc_auc": 0.9832846181951042
+      }
     }
   }
 }
