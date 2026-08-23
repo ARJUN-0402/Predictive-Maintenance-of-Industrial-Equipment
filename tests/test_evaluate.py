@@ -1,7 +1,55 @@
 import pandas as pd
 import numpy as np
-from src.train import train_all_models
-from src.evaluate import compute_all_metrics, run_evaluation, compare_models
+import pytest
+from unittest.mock import MagicMock
+
+from src.evaluate import compute_all_metrics, compare_models
+
+
+def _make_mock_model(y_pred: np.ndarray, y_prob: np.ndarray) -> MagicMock:
+    model = MagicMock()
+    model.predict.return_value = y_pred
+    model.predict_proba.return_value = np.column_stack([1 - y_prob, y_prob])
+    return model
+
+
+@pytest.fixture
+def mock_eval_data() -> dict:
+    rng = np.random.default_rng(42)
+    n = 200
+    n_features = 13
+    feature_names = [f"f{i}" for i in range(n_features)]
+
+    X_test = pd.DataFrame(
+        rng.standard_normal((n, n_features)), columns=feature_names
+    )
+    y_test = pd.Series(rng.integers(0, 2, size=n), name="Machine failure")
+
+    y_prob = rng.uniform(0.0, 1.0, size=n)
+    y_pred = (y_prob >= 0.5).astype(int)
+
+    models = {
+        name: _make_mock_model(y_pred, y_prob)
+        for name in ("xgboost", "random_forest", "gradient_boosting", "logistic_regression")
+    }
+
+    metrics = {
+        name: {
+            "accuracy": 0.85,
+            "precision": 0.7,
+            "recall": 0.6,
+            "f1": 0.65,
+            "roc_auc": 0.9,
+        }
+        for name in models
+    }
+
+    return {
+        "models": models,
+        "metrics": metrics,
+        "X_test": X_test,
+        "y_test": y_test,
+    }
 
 
 class TestEvaluation:
@@ -34,21 +82,20 @@ class TestEvaluation:
         assert metrics["recall"] == 0.0  # Missed the failure
         assert metrics["precision"] == 0.0  # No true positives
 
-    def test_run_evaluation_returns_df(self):
-        results = train_all_models()
-        models = results["models"]
-        X_test = results["X_test"]
-        y_test = results["y_test"]
-        comparison_df = run_evaluation(models, X_test, y_test)
+    def test_run_evaluation_returns_df(self, mock_eval_data: dict):
+        from src.evaluate import run_evaluation
+
+        comparison_df = run_evaluation(
+            mock_eval_data["models"],
+            mock_eval_data["X_test"],
+            mock_eval_data["y_test"],
+        )
         assert isinstance(comparison_df, pd.DataFrame)
         assert "roc_auc" in comparison_df.columns
 
-    def test_compare_models_has_roc_auc(self):
-        results = train_all_models()
-        metrics = results["metrics"]
-        comparison_df = compare_models(metrics)
+    def test_compare_models_has_roc_auc(self, mock_eval_data: dict):
+        comparison_df = compare_models(mock_eval_data["metrics"])
         assert "roc_auc" in comparison_df.columns
-        # XGBoost should have the highest ROC-AUC (with scale_pos_weight)
         top_model = comparison_df.index[0]
         assert top_model in comparison_df.index
 
@@ -60,11 +107,12 @@ class TestThresholdOptimization:
         import warnings
         warnings.filterwarnings("ignore")
         from src.threshold_optimization import optimize_threshold
-        from src.train import train_all_models
 
-        results = train_all_models()
-        y_prob = results["models"]["xgboost"].predict_proba(results["X_test"])[:, 1]
-        result = optimize_threshold(results["y_test"], y_prob)
+        rng = np.random.default_rng(42)
+        y_true = pd.Series(rng.integers(0, 2, size=200))
+        y_prob = rng.uniform(0.05, 0.95, size=200)
+
+        result = optimize_threshold(y_true, y_prob)
         assert "best_threshold" in result
         assert "best_f1" in result
         assert "best_recall" in result
@@ -88,22 +136,18 @@ class TestThresholdOptimization:
         for col in ("threshold", "precision", "recall", "f1", "false_negatives"):
             assert col in data.columns
 
-        # Best F1 reported must equal the maximum F1 across all evaluated thresholds
         assert abs(float(data["f1"].max()) - result["best_f1"]) < 1e-9
 
-        # Threshold analysis must contain F1, Precision and Recall traces (per-threshold)
         assert len(data) > 1
         assert data["f1"].between(0.0, 1.0).all()
         assert data["precision"].between(0.0, 1.0).all()
         assert data["recall"].between(0.0, 1.0).all()
+
         import warnings
         warnings.filterwarnings("ignore")
         from src.threshold_optimization import recommend_threshold_for_recall
-        from src.train import train_all_models
 
-        results = train_all_models()
-        y_prob = results["models"]["xgboost"].predict_proba(results["X_test"])[:, 1]
-        result = recommend_threshold_for_recall(results["y_test"], y_prob, minimum_recall=0.80)
+        result = recommend_threshold_for_recall(y_true, y_prob, minimum_recall=0.80)
         assert "threshold" in result
         assert "recall" in result
         assert "precision" in result

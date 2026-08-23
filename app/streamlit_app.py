@@ -218,210 +218,169 @@ def _artifact_warning() -> None:
 
 
 def _render_architecture() -> None:
-    st.markdown(
-        """
-        <div style="display:flex;flex-direction:column;align-items:center;
-            gap:4px;margin:16px 0;">
-            <div class="arch-node" style="min-width:140px;">
-                <div class="title">DATA</div>
-                <div class="desc">AI4I 2020</div>
-            </div>
-            <div class="arch-arrow">&#x2193;</div>
-            <div style="display:flex;flex-wrap:wrap;justify-content:center;
-                gap:8px;width:100%;">
-                <div class="arch-node" style="flex:1;min-width:140px;">
-                    <div class="title">Raw Dataset</div>
-                    <div class="desc">10,000 sensor rows</div>
-                </div>
-            </div>
-            <div class="arch-arrow">&#x2193;</div>
-            <div style="display:flex;flex-wrap:wrap;justify-content:center;
-                gap:8px;width:100%;">
-                <div class="arch-node" style="flex:1;min-width:140px;">
-                    <div class="title">Preprocessing</div>
-                    <div class="desc">Clean / Encode / Scale</div>
-                </div>
-            </div>
-            <div class="arch-arrow">&#x2193;</div>
-            <div style="display:flex;flex-wrap:wrap;justify-content:center;
-                gap:8px;width:100%;">
-                <div class="arch-node" style="flex:1;min-width:140px;">
-                    <div class="title">Feature Engineering</div>
-                    <div class="desc">Derived sensor features</div>
-                </div>
-            </div>
-            <div class="arch-arrow">&#x2193;</div>
-            <div style="display:flex;flex-wrap:wrap;justify-content:center;
-                gap:8px;width:100%;">
-                <div class="arch-node" style="flex:1;min-width:140px;">
-                    <div class="title">ML Prediction</div>
-                    <div class="desc">XGBoost classifier</div>
-                </div>
-            </div>
-            <div class="arch-arrow">&#x2193;</div>
-            <div style="display:flex;flex-wrap:wrap;justify-content:center;
-                gap:8px;width:100%;">
-                <div class="arch-node" style="flex:1;min-width:140px;">
-                    <div class="title">Failure Risk</div>
-                    <div class="desc">Probability + Threshold</div>
-                </div>
-            </div>
-            <div class="arch-arrow">&#x2193;</div>
-            <div style="display:flex;flex-wrap:wrap;justify-content:center;
-                gap:8px;width:100%;">
-                <div class="arch-node" style="flex:1;min-width:140px;">
-                    <div class="title">SHAP</div>
-                    <div class="desc">Global + Local XAI</div>
-                </div>
-                <div class="arch-node" style="flex:1;min-width:140px;">
-                    <div class="title">LIME</div>
-                    <div class="desc">Local explanation</div>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    """Render the ML architecture flow using native Streamlit components."""
+    steps = [
+        ("Raw Dataset", "AI4I 2020 dataset with sensor readings"),
+        ("Data Loading", "Load and validate the raw CSV data"),
+        ("Preprocessing", "Clean, encode, scale, and handle missing values"),
+        ("Feature Engineering", "Create derived features like temperature diff, power, etc."),
+        ("Model Prediction", "XGBoost classifier predicts failure probability"),
+        ("Failure Probability", "Model outputs probability of equipment failure"),
+        ("Decision Threshold", "Compare probability to threshold to decide risk"),
+        ("Risk Classification", "Classify as Low, Medium, or High risk"),
+        ("SHAP Explanation", "Global and local explainability with SHAP values"),
+        ("LIME Explanation", "Local interpretable model-agnostic explanations"),
+    ]
+
+    st.markdown("### ML Architecture & Workflow")
+
+    for i, (title, desc) in enumerate(steps):
+        with st.container(border=True):
+            st.markdown(f"**{title}**")
+            st.caption(desc)
+
+        if i < len(steps) - 1:
+            st.markdown(
+                "<div style='text-align: center; color: #00d4ff; "
+                "font-size: 24px; margin: 8px 0;'>↓</div>",
+                unsafe_allow_html=True,
+            )
 
 
 # ---------------------------------------------------------------------------
 # Pages
 # ---------------------------------------------------------------------------
 def page_home() -> None:
+    # Hero section
     st.markdown(
         """
         <div class="hero">
             <h1>Predictive Maintenance of Industrial Equipment</h1>
-            <p>ML-powered machine failure prediction using XGBoost and
-            Explainable AI. Predict equipment failure from sensor data, adjust
-            the decision threshold, and understand each prediction with SHAP
-            and LIME.</p>
+            <p>ML-powered machine failure prediction with Explainable AI</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button(
-            "⚡ Try Failure Prediction",
-            type="primary",
-            use_container_width=True,
-        ):
-            st.session_state["page"] = "Predict Failure"
-            st.rerun()
-    with col2:
-        if st.button(
-            "🔎 Explore Explainability",
-            use_container_width=True,
-        ):
-            st.session_state["page"] = "Explain Prediction"
-            st.rerun()
+    # Primary CTA
+    if st.button(
+        "⚡ Try Failure Prediction Now",
+        type="primary",
+        use_container_width=True,
+    ):
+        st.session_state["page"] = "Predict Failure"
+        st.rerun()
 
-    # --- Project overview cards ---
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Description
+    st.markdown(
+        """
+        This application predicts industrial equipment failure using sensor data
+        from the AI4I 2020 dataset. An XGBoost classifier produces failure
+        probabilities, which are compared against an adjustable decision threshold
+        to classify risk. Every prediction is explained using SHAP and LIME so you
+        can understand *why* the model flags a machine as high-risk.
+        """
+    )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Metric cards row
     registry = load_registry_resource()
     shared = registry.get("shared", {})
     dataset_info = shared.get("dataset_info", {})
     versions = registry.get("versions", {})
     num_models = len({v.get("model") for v in versions.values()}) if versions else 0
     dataset_rows = dataset_info.get("rows", "Available after training")
-    primary_model = "XGBoost" if artifacts_exist() else "Available after training"
-    explainability = "SHAP + LIME" if artifacts_exist() else "Available after training"
+    xgb_metrics = load_xgboost_metrics()
 
-    st.markdown(
-        '<div class="section-title">Project Overview</div>',
-        unsafe_allow_html=True,
+    # Prepare metrics
+    roc_auc = (
+        f"{xgb_metrics.get('roc_auc', 0):.4f}"
+        if xgb_metrics
+        else "Available after training"
     )
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
+    precision = (
+        f"{xgb_metrics.get('precision', 0):.4f}"
+        if xgb_metrics
+        else "Available after training"
+    )
+    recall = (
+        f"{xgb_metrics.get('recall', 0):.4f}"
+        if xgb_metrics
+        else "Available after training"
+    )
+    f1 = (
+        f"{xgb_metrics.get('f1', 0):.4f}"
+        if xgb_metrics
+        else "Available after training"
+    )
+    explainability = (
+        "SHAP + LIME" if artifacts_exist() else "Available after training"
+    )
+
+    # Create 4 columns for the metric cards
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
         st.markdown(
             card_html("Models", str(num_models), "#00d4ff"),
             unsafe_allow_html=True,
         )
-    with c2:
+    with m2:
         st.markdown(
-            card_html("Dataset", f"{dataset_rows} rows", "#00c853"),
+            card_html("Dataset Size", f"{dataset_rows} rows", "#00c853"),
             unsafe_allow_html=True,
         )
-    with c3:
+    with m3:
         st.markdown(
-            card_html("Primary Model", primary_model, "#ffab00"),
+            card_html("ROC-AUC", roc_auc, "#ffab00"),
             unsafe_allow_html=True,
         )
-    with c4:
+    with m4:
         st.markdown(
-            card_html("Explainability", explainability, "#ff4b4b"),
+            card_html("Explainability", explainability, "#00d4ff"),
             unsafe_allow_html=True,
         )
 
-    # --- Deployed model performance (XGBoost) ---
+    # Second row of metric cards
+    m5, m6, m7, m8 = st.columns(4)
+    with m5:
+        st.markdown(
+            card_html("Precision", precision, "#00c853"),
+            unsafe_allow_html=True,
+        )
+    with m6:
+        st.markdown(
+            card_html("Recall", recall, "#ffab00"),
+            unsafe_allow_html=True,
+        )
+    with m7:
+        st.markdown(
+            card_html("F1 Score", f1, "#ff4b4b"),
+            unsafe_allow_html=True,
+        )
+    with m8:
+        # Primary model indicator
+        primary_model = "XGBoost" if artifacts_exist() else "Available after training"
+        st.markdown(
+            card_html("Primary Model", primary_model, "#00d4ff"),
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Architecture section
     st.markdown(
-        '<div class="section-title">Deployed Model Performance (XGBoost)</div>',
-        unsafe_allow_html=True,
-    )
-    xgb_metrics = load_xgboost_metrics()
-    if xgb_metrics:
-        m1, m2, m3, m4, m5 = st.columns(5)
-        with m1:
-            st.markdown(
-                card_html("Accuracy", f"{xgb_metrics.get('accuracy', 0):.4f}", "#00d4ff"),
-                unsafe_allow_html=True,
-            )
-        with m2:
-            st.markdown(
-                card_html("Precision", f"{xgb_metrics.get('precision', 0):.4f}", "#00c853"),
-                unsafe_allow_html=True,
-            )
-        with m3:
-            st.markdown(
-                card_html("Recall", f"{xgb_metrics.get('recall', 0):.4f}", "#ffab00"),
-                unsafe_allow_html=True,
-            )
-        with m4:
-            st.markdown(
-                card_html("F1", f"{xgb_metrics.get('f1', 0):.4f}", "#00d4ff"),
-                unsafe_allow_html=True,
-            )
-        with m5:
-            st.markdown(
-                card_html("ROC-AUC", f"{xgb_metrics.get('roc_auc', 0):.4f}", "#00c853"),
-                unsafe_allow_html=True,
-            )
-        st.caption(
-            "Metrics computed on the held-out test set with the default "
-            "0.50 threshold."
-        )
-    else:
-        st.info("Model metrics will appear here after training.")
-
-    # --- Model comparison table ---
-    comp_df = load_model_comparison()
-    if comp_df is not None and "xgboost" in comp_df.index:
-        st.markdown(
-            '<div class="section-title">Model Comparison (sorted by ROC-AUC)</div>',
-            unsafe_allow_html=True,
-        )
-        styled = comp_df.copy()
-        styled.index.name = "Model"
-        styled = styled.reset_index()
-        styled["Model"] = styled["Model"].apply(
-            lambda m: f"⭐ {m.title()}" if m == "xgboost" else m.title()
-        )
-        st.dataframe(styled, use_container_width=True, hide_index=True)
-        st.caption(
-            "XGBoost is the primary deployed model. Other models are "
-            "training benchmarks."
-        )
-
-    # --- Architecture ---
-    st.markdown(
-        '<div class="section-title">Architecture</div>',
+        '<div class="section-title">System Architecture</div>',
         unsafe_allow_html=True,
     )
     with st.container(border=True):
         _render_architecture()
 
-    # --- How it works ---
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # How it works
     st.markdown(
         '<div class="section-title">How It Works</div>',
         unsafe_allow_html=True,
@@ -435,8 +394,10 @@ def page_home() -> None:
          "Derived features capture physical relationships in the sensor readings."),
         ("04", "Failure Prediction",
          "The trained XGBoost model produces a failure probability."),
-        ("05", "Explainable Decision",
-         "The prediction is classified by threshold and explained using SHAP and LIME."),
+        ("05", "Risk Classification",
+         "Probability is compared to decision threshold to classify risk level."),
+        ("06", "Explainable AI",
+         "SHAP and LIME provide interpretable explanations for each prediction."),
     ]
     for num, title, desc in steps:
         c1, c2 = st.columns([1, 5])
@@ -452,20 +413,20 @@ def page_home() -> None:
             unsafe_allow_html=True,
         )
 
-    # --- Project highlights ---
+    # Project highlights
     st.markdown(
-        '<div class="section-title">Project Highlights</div>',
+        '<div class="section-title">Key Features</div>',
         unsafe_allow_html=True,
     )
     highlights = [
-        "Machine failure prediction",
-        "XGBoost + model comparison",
-        "Adjustable decision threshold",
-        "SHAP explainability",
-        "LIME explainability",
-        "Batch CSV prediction",
-        "Automated evaluation",
-        "Model artifact management",
+        "End-to-end predictive maintenance pipeline",
+        "Production-ready ML with XGBoost",
+        "Interactive prediction with threshold adjustment",
+        "Comprehensive explainability (SHAP & LIME)",
+        "Batch prediction for industrial IoT datasets",
+        "Automated model evaluation and comparison",
+        "Professional reporting and model management",
+        "Deployment-ready with Docker and CI/CD",
     ]
     cols = st.columns(2)
     for i, item in enumerate(highlights):
@@ -475,19 +436,19 @@ def page_home() -> None:
                 unsafe_allow_html=True,
             )
 
-    # --- System status ---
+    # System status
     st.markdown(
         '<div class="section-title">System Status</div>',
         unsafe_allow_html=True,
     )
-    status1, status2, status3 = st.columns(3)
+    status1, status2, status3, status4 = st.columns(4)
     with status1:
         dot = (
             '<span class="status-dot status-ready"></span>'
             if artifacts_exist()
             else '<span class="status-dot status-warn"></span>'
         )
-        label = "Model Ready" if artifacts_exist() else "Model Unavailable"
+        label = "Model Artifacts" if artifacts_exist() else "Model Artifacts Missing"
         st.markdown(f"{dot} **{label}**", unsafe_allow_html=True)
     with status2:
         dot = (
@@ -495,9 +456,17 @@ def page_home() -> None:
             if processed_data_exists()
             else '<span class="status-dot status-warn"></span>'
         )
-        label = "Preprocessing Ready" if processed_data_exists() else "Preprocessing Unavailable"
+        label = "Processed Data" if processed_data_exists() else "Processed Data Missing"
         st.markdown(f"{dot} **{label}**", unsafe_allow_html=True)
     with status3:
+        dot = (
+            '<span class="status-dot status-ready"></span>'
+            if artifacts_exist()
+            else '<span class="status-dot status-warn"></span>'
+        )
+        label = "Prediction Ready" if artifacts_exist() else "Prediction Unavailable"
+        st.markdown(f"{dot} **{label}**", unsafe_allow_html=True)
+    with status4:
         dot = (
             '<span class="status-dot status-ready"></span>'
             if artifacts_exist()
@@ -890,10 +859,13 @@ def page_predict_failure() -> None:
                             temp_path = Path("data/raw/_batch_upload.csv")
                             temp_path.parent.mkdir(parents=True, exist_ok=True)
                             df_upload.to_csv(temp_path, index=False)
-                            results_df = batch_predict(
-                                temp_path, threshold=threshold
-                            )
-                            os.remove(temp_path)
+                            try:
+                                results_df = batch_predict(
+                                    temp_path, threshold=threshold
+                                )
+                            finally:
+                                if temp_path.exists():
+                                    os.remove(temp_path)
 
                             st.dataframe(
                                 results_df, use_container_width=True
