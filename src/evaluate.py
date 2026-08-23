@@ -18,7 +18,7 @@ from sklearn.metrics import (
     roc_curve,
 )
 
-from src.config import FIGURES_DIR, RESULTS_DIR
+from src.config import FIGURES_DIR, REPORTS_DIR
 from src.utils import setup_logging
 
 logger = setup_logging("evaluate")
@@ -52,6 +52,7 @@ def save_confusion_matrix(
     y_true: pd.Series,
     y_pred: np.ndarray,
     model_name: str,
+    output_dir: Path = FIGURES_DIR,
 ) -> Path:
     cm = confusion_matrix(y_true, y_pred)
     fig, ax = plt.subplots(figsize=(6, 5))
@@ -76,8 +77,8 @@ def save_confusion_matrix(
                 color="white" if cm[i, j] > cm.max() / 2 else "black",
             )
     fig.tight_layout()
-    out_path = FIGURES_DIR / f"confusion_matrix_{model_name}.png"
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / f"confusion_matrix_{model_name}.png"
+    output_dir.mkdir(parents=True, exist_ok=True)
     fig.savefig(str(out_path), dpi=150, bbox_inches="tight")
     plt.close(fig)
     logger.info("Saved confusion matrix to %s", out_path)
@@ -178,10 +179,14 @@ def run_evaluation(
     models: dict[str, Any],
     X_test: pd.DataFrame,
     y_test: pd.Series,
+    output_dir: Path = REPORTS_DIR,
 ) -> pd.DataFrame:
     all_preds: dict[str, np.ndarray] = {}
     all_probs: dict[str, np.ndarray] = {}
     all_metrics: dict[str, dict] = {}
+
+    figures_dir = output_dir / "figures"
+    results_dir = output_dir / "results"
 
     for name, model in models.items():
         logger.info("Evaluating %s", name)
@@ -190,19 +195,19 @@ def run_evaluation(
         all_preds[name] = y_pred
         all_probs[name] = y_prob
         all_metrics[name] = compute_all_metrics(y_test, y_pred, y_prob)
-        save_confusion_matrix(y_test, y_pred, name)
+        save_confusion_matrix(y_test, y_pred, name, figures_dir)
 
-    roc_path = RESULTS_DIR / "roc_curve.html"
-    pr_path = RESULTS_DIR / "pr_curve.html"
-    report_path = RESULTS_DIR / "classification_report.txt"
+    roc_path = results_dir / "roc_curve.html"
+    pr_path = results_dir / "pr_curve.html"
+    report_path = results_dir / "classification_report.txt"
 
     save_roc_curve(y_test, all_probs, roc_path)
     save_pr_curve(y_test, all_probs, pr_path)
     save_classification_report(y_test, all_preds, all_probs, report_path)
 
     comparison_df = compare_models(all_metrics)
-    comparison_df.to_csv(RESULTS_DIR / "model_comparison.csv", index=True)
-    logger.info("Model comparison saved to %s", RESULTS_DIR / "model_comparison.csv")
+    comparison_df.to_csv(results_dir / "model_comparison.csv", index=True)
+    logger.info("Model comparison saved to %s", results_dir / "model_comparison.csv")
 
     return comparison_df
 

@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest
+from pathlib import Path
 from unittest.mock import MagicMock
 
 from src.evaluate import compute_all_metrics, compare_models
@@ -82,13 +83,14 @@ class TestEvaluation:
         assert metrics["recall"] == 0.0  # Missed the failure
         assert metrics["precision"] == 0.0  # No true positives
 
-    def test_run_evaluation_returns_df(self, mock_eval_data: dict):
+    def test_run_evaluation_returns_df(self, mock_eval_data: dict, tmp_path: Path):
         from src.evaluate import run_evaluation
 
         comparison_df = run_evaluation(
             mock_eval_data["models"],
             mock_eval_data["X_test"],
             mock_eval_data["y_test"],
+            output_dir=tmp_path,
         )
         assert isinstance(comparison_df, pd.DataFrame)
         assert "roc_auc" in comparison_df.columns
