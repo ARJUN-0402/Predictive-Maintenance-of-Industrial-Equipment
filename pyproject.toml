@@ -9,7 +9,7 @@ description = "Predictive Maintenance of Industrial Equipment using XGBoost and 
 requires-python = ">=3.10"
 
 [tool.setuptools]
-packages = ["src"]
+packages = ["src", "app"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

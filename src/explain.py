@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import shap
 
-from src.config import RANDOM_SEED
+from src.config import FIGURES_DIR, RANDOM_SEED
 from src.utils import setup_logging
 
 logger = setup_logging("explain")
@@ -76,7 +76,7 @@ def shap_waterfall_plot(
     try:
         shap_values = explainer.shap_values(X, check_additivity=False)
         if output_path is None:
-            output_path = Path("reports/figures/shap_waterfall.png")
+            output_path = FIGURES_DIR / "shap_waterfall.png"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         fig = shap.waterfall_plot(
             shap.Explanation(
@@ -106,7 +106,7 @@ def shap_force_plot_html(
     try:
         shap_values = explainer.shap_values(X, check_additivity=False)
         if output_path is None:
-            output_path = Path("reports/figures/shap_force.html")
+            output_path = FIGURES_DIR / "shap_force.html"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         force_html = shap.force_plot(
             explainer.expected_value,

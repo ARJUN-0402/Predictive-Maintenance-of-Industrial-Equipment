@@ -9,6 +9,7 @@ import streamlit as st
 from src.config import (
     FIGURES_DIR,
     MODEL_REGISTRY_PATH,
+    RAW_DATA_DIR,
     RESULTS_DIR,
     SCALER_PATH,
     TARGET_COLUMN,
@@ -856,7 +857,7 @@ def page_predict_failure() -> None:
                 else:
                     if st.button("Run Batch Predictions", type="primary"):
                         with st.spinner("Running predictions..."):
-                            temp_path = Path("data/raw/_batch_upload.csv")
+                            temp_path = RAW_DATA_DIR / "_batch_upload.csv"
                             temp_path.parent.mkdir(parents=True, exist_ok=True)
                             df_upload.to_csv(temp_path, index=False)
                             try:

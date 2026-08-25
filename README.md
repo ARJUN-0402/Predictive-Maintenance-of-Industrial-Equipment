@@ -162,7 +162,7 @@ The app will be available at `http://localhost:8501`.
 ### 1. Launch the dashboard (recommended)
 
 ```bash
-streamlit run app/streamlit_app.py
+streamlit run streamlit_app.py
 ```
 
 Opens the dashboard at `http://localhost:8501`. Pretrained model artifacts are loaded automatically when available. No training is required to make predictions.
@@ -263,7 +263,7 @@ python -m flake8 src/ app/ tests/ --max-line-length=100
 
 1. Push this repository to GitHub.
 2. Go to [share.streamlit.io](https://share.streamlit.io) and sign in.
-3. Click **New app**, select the repository, and set the main file to `app/streamlit_app.py`.
+3. Click **New app**, select the repository, and set the main file to `streamlit_app.py`.
 4. Click **Deploy**.
 
 The deployed app will be available at the URL provided by Streamlit Community Cloud.
