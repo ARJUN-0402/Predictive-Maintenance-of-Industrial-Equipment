@@ -76,6 +76,12 @@ def predict(
     y_prob = model.predict_proba(X_scaled)[:, 1]
     y_pred = (y_prob >= threshold).astype(int)
 
+    if not (0.0 <= y_prob.min() <= y_prob.max() <= 1.0):
+        raise ValueError(
+            f"Model probabilities must be in [0, 1], got range "
+            f"[{y_prob.min():.4f}, {y_prob.max():.4f}]"
+        )
+
     results = []
     for i in range(len(y_prob)):
         results.append(

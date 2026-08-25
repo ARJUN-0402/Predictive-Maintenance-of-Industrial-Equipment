@@ -74,9 +74,18 @@ def validate_columns(df: pd.DataFrame, expected: list[str]) -> None:
         raise ValueError(f"Unexpected columns: {sorted(extra)}")
 
 
+def format_probability(probability: float) -> str:
+    if not 0.0 <= probability <= 1.0:
+        raise ValueError(
+            f"Probability must be in [0, 1], got {probability}"
+        )
+    return f"{probability:.1%}"
+
+
 __all__ = [
     "setup_logging",
     "card_html",
     "generate_report",
     "validate_columns",
+    "format_probability",
 ]

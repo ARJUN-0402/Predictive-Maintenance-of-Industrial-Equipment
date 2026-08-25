@@ -29,7 +29,7 @@ from src.explain import (
 from src.predict import batch_predict, predict
 from src.preprocessing import load_processed_data
 from src.train import train_all_models
-from src.utils import card_html, generate_report, setup_logging
+from src.utils import card_html, format_probability, generate_report, setup_logging
 
 logger = setup_logging("streamlit_app")
 
@@ -702,7 +702,7 @@ def _display_prediction_card(result: dict, threshold: float) -> None:
         unsafe_allow_html=True,
     )
 
-    st.progress(prob, format=f"{prob*100:.1f}%")
+    st.progress(prob, text=format_probability(prob))
 
     if pred == 1:
         st.info(
@@ -816,10 +816,28 @@ def page_predict_failure() -> None:
             }
             try:
                 result = predict(input_dict, threshold=threshold)
-                _display_prediction_card(result, threshold)
             except Exception as exc:
                 st.error(f"Prediction failed: {exc}")
                 logger.error("Prediction error: %s", exc)
+                return
+
+            try:
+                _display_prediction_card(result, threshold)
+            except Exception:
+                logger.exception("Prediction visualization failed")
+                st.warning(
+                    "Prediction succeeded, but a visualization component "
+                    "failed to render. The result is shown below."
+                )
+                pred = result["prediction"]
+                prob = result["probability"]
+                risk = result["risk_level"]
+                label = "FAILURE" if pred == 1 else "NORMAL"
+                st.info(
+                    f"**Prediction:** {label} — {format_probability(prob)} "
+                    f"failure probability. Risk Level: {risk} | "
+                    f"Threshold: {threshold:.2f}"
+                )
 
     with tab_b:
         st.markdown("#### Batch Prediction from CSV")
