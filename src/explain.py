@@ -10,6 +10,32 @@ from src.utils import setup_logging
 logger = setup_logging("explain")
 
 
+def _save_plot_figure(
+    plot_object,
+    output_path: Path,
+    *,
+    bbox_inches: str = "tight",
+    dpi: int = 150,
+) -> Path:
+    import matplotlib.pyplot as plt
+
+    if hasattr(plot_object, "figure"):
+        figure = plot_object.figure
+    elif hasattr(plot_object, "savefig"):
+        figure = plot_object
+    elif plot_object is None:
+        figure = plt.gcf()
+    else:
+        raise TypeError(
+            f"Unsupported plot object type: {type(plot_object)}"
+        )
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(str(output_path), bbox_inches=bbox_inches, dpi=dpi)
+    plt.close(figure)
+    return output_path
+
+
 def get_shap_explainer(model, X: pd.DataFrame | None = None) -> shap.TreeExplainer:
     try:
         if X is not None:
@@ -32,13 +58,12 @@ def shap_summary_plot(
 ) -> Path:
     try:
         shap_values = explainer.shap_values(X, check_additivity=False)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        fig = shap.summary_plot(
-            shap_values, X, show=False, plot_type="dot", max_display=15
+        _save_plot_figure(
+            shap.summary_plot(
+                shap_values, X, show=False, plot_type="dot", max_display=15
+            ),
+            output_path,
         )
-        fig.savefig(str(output_path), bbox_inches="tight", dpi=150)
-        import matplotlib.pyplot as plt
-        plt.close("all")
         logger.info("Saved SHAP summary plot to %s", output_path)
     except Exception as exc:
         logger.error("Failed to generate SHAP summary plot: %s", exc)
@@ -53,13 +78,12 @@ def shap_bar_plot(
 ) -> Path:
     try:
         shap_values = explainer.shap_values(X, check_additivity=False)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        fig = shap.summary_plot(
-            shap_values, X, show=False, plot_type="bar", max_display=15
+        _save_plot_figure(
+            shap.summary_plot(
+                shap_values, X, show=False, plot_type="bar", max_display=15
+            ),
+            output_path,
         )
-        fig.savefig(str(output_path), bbox_inches="tight", dpi=150)
-        import matplotlib.pyplot as plt
-        plt.close("all")
         logger.info("Saved SHAP bar plot to %s", output_path)
     except Exception as exc:
         logger.error("Failed to generate SHAP bar plot: %s", exc)
@@ -77,19 +101,18 @@ def shap_waterfall_plot(
         shap_values = explainer.shap_values(X, check_additivity=False)
         if output_path is None:
             output_path = FIGURES_DIR / "shap_waterfall.png"
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        fig = shap.waterfall_plot(
-            shap.Explanation(
-                values=shap_values[idx],
-                base_values=explainer.expected_value,
-                data=X.iloc[idx].values,
-                feature_names=list(X.columns),
+        _save_plot_figure(
+            shap.waterfall_plot(
+                shap.Explanation(
+                    values=shap_values[idx],
+                    base_values=explainer.expected_value,
+                    data=X.iloc[idx].values,
+                    feature_names=list(X.columns),
+                ),
+                show=False,
             ),
-            show=False,
+            output_path,
         )
-        fig.savefig(str(output_path), bbox_inches="tight", dpi=150)
-        import matplotlib.pyplot as plt
-        plt.close("all")
         logger.info("Saved SHAP waterfall plot to %s", output_path)
     except Exception as exc:
         logger.error("Failed to generate SHAP waterfall plot: %s", exc)
@@ -137,14 +160,12 @@ def shap_dependence_plots(
             if feat not in X.columns:
                 continue
             out_path = output_dir / f"shap_dependence_{feat}.png"
-            fig = shap.dependence_plot(
-                feat, shap_values, X, show=False
+            _save_plot_figure(
+                shap.dependence_plot(
+                    feat, shap_values, X, show=False
+                ),
+                out_path,
             )
-            import matplotlib.pyplot as plt
-            fig.get_figure().savefig(
-                str(out_path), bbox_inches="tight", dpi=150
-            )
-            plt.close("all")
             paths.append(out_path)
             logger.info("Saved SHAP dependence plot for %s", feat)
     except Exception as exc:
