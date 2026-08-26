@@ -1,4 +1,4 @@
-"""Reusable UI helper functions for the industrial AI Streamlit application."""
+"""Reusable UI components for the industrial AI command center."""
 
 from __future__ import annotations
 
@@ -9,26 +9,350 @@ import streamlit as st
 from src.ui_styles import DESIGN
 
 
-def render_page_header(title: str, subtitle: str | None = None) -> None:
-    """Render a consistent page header with optional subtitle."""
-    st.markdown(f"## {title}")
-    if subtitle:
-        st.caption(subtitle)
-
-
-def render_section_header(title: str) -> None:
-    """Render a section header with the accent style."""
+# ---------------------------------------------------------------------------
+# Core identity
+# ---------------------------------------------------------------------------
+def page_header(title: str, subtitle: str) -> None:
     st.markdown(
-        f'<div class="section-title">{title}</div>',
+        f"""
+        <div class="page-identity">
+            <div class="page-identity-left">
+                <h1>{title}</h1>
+                <p>{subtitle}</p>
+            </div>
+            <div class="page-identity-right">
+                <span class="identity-meta">Inference Engine</span>
+                <span class="identity-value">XGBoost</span>
+                <span class="identity-meta">Explainability</span>
+                <span class="identity-value">SHAP + LIME</span>
+                <div style="margin-top: 0.5rem;">
+                    <span class="status-online">
+                        <span class="status-dot"></span>
+                        SYSTEM ONLINE
+                    </span>
+                </div>
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
 
-def render_metric_card(title: str, value: str, color: str | None = None) -> None:
-    """Render a single metric card."""
-    accent = color or DESIGN["accent"]
+# ---------------------------------------------------------------------------
+# Section headers
+# ---------------------------------------------------------------------------
+def section_header(title: str) -> None:
+    st.markdown(f'<div class="section-label">{title}</div>', unsafe_allow_html=True)
+
+
+def section_title(title: str) -> None:
+    st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
+# Metrics
+# ---------------------------------------------------------------------------
+def metric_mega(value: str, unit: str = "") -> None:
+    unit_html = f'<span style="font-size:0.4em;font-weight:600;color:#8b949e;margin-left:0.25rem;">{unit}</span>' if unit else ""
+    st.markdown(f'<div class="metric-mega">{value}{unit_html}</div>', unsafe_allow_html=True)
+
+
+def metric_large(value: str, color: str | None = None) -> None:
+    c = color or DESIGN["text_primary"]
     st.markdown(
-        card_html(title, value, accent),
+        f'<div class="metric-large" style="color:{c};">{value}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def metric_editorial_row(metrics: Sequence[tuple[str, str, str | None]]) -> None:
+    if not metrics:
+        return
+    cells = []
+    for label, value, color in metrics:
+        c = color or DESIGN["text_primary"]
+        cells.append(
+            f"""
+            <div class="metric-editorial-item">
+                <div class="metric-editorial-value" style="color:{c};">{value}</div>
+                <div class="metric-editorial-label">{label}</div>
+            </div>
+            """
+        )
+    st.markdown(f'<div class="metric-editorial-row">{"".join(cells)}</div>', unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
+# Status & risk
+# ---------------------------------------------------------------------------
+def status_indicator(status: str = "ready", label: str = "") -> None:
+    color = {
+        "ready": DESIGN["success"],
+        "warn": DESIGN["warning"],
+        "error": DESIGN["error"],
+    }.get(status, DESIGN["text_muted"])
+
+    label_html = f'<span style="margin-left:0.4rem;font-size:0.75rem;font-weight:600;color:#e6edf3;">{label}</span>' if label else ""
+    st.markdown(
+        f"""
+        <span style="display:inline-flex;align-items:center;gap:0.4rem;">
+            <span style="width:6px;height:6px;border-radius:50%;background-color:{color};"></span>
+            {label_html}
+        </span>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def risk_badge(risk: str) -> None:
+    color = {
+        "LOW": DESIGN["success"],
+        "MEDIUM": DESIGN["warning"],
+        "HIGH": DESIGN["error"],
+    }.get(risk.upper(), DESIGN["text_secondary"])
+    st.markdown(
+        f"""
+        <span style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.25rem 0.6rem;
+        background-color:{color}15;border:1px solid {color}30;border-radius:3px;
+        font-size:0.7rem;font-weight:700;letter-spacing:0.08em;color:{color};">
+            {risk.upper()}
+        </span>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def risk_scale(probability: float, threshold: float = 0.5) -> None:
+    pct = max(0.0, min(1.0, probability))
+    marker_left = pct * 100
+    st.markdown(
+        f"""
+        <div style="position:relative;padding:0.5rem 0 1.5rem 0;">
+            <div class="risk-scale">
+                <div class="risk-marker" style="left:{marker_left}%;" data-value="{pct:.1%}"></div>
+            </div>
+            <div class="risk-scale-labels">
+                <span>Low</span>
+                <span>Medium</span>
+                <span>High</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Telemetry
+# ---------------------------------------------------------------------------
+def telemetry_row(items: Sequence[tuple[str, str, str, str]]) -> None:
+    """items: (label, value, unit, status) where status is 'ready'|'warn'|'error'"""
+    color_map = {"ready": DESIGN["success"], "warn": DESIGN["warning"], "error": DESIGN["error"]}
+    cells = []
+    for label, value, unit, status in items:
+        c = color_map.get(status, DESIGN["text_secondary"])
+        cells.append(
+            f"""
+            <div class="telemetry-item">
+                <div class="telemetry-label">{label}</div>
+                <div class="telemetry-value">
+                    <span>{value}<span class="telemetry-unit">{unit}</span></span>
+                    <span class="telemetry-status" style="background-color:{c};"></span>
+                </div>
+            </div>
+            """
+        )
+    st.markdown(f'<div class="telemetry-grid">{"".join(cells)}</div>', unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
+# Prediction
+# ---------------------------------------------------------------------------
+def prediction_panel(result: dict, threshold: float) -> None:
+    pred = result["prediction"]
+    prob = result["probability"]
+    risk = result["risk_level"]
+
+    label = "FAILURE" if pred == 1 else "NORMAL"
+    color = DESIGN["error"] if pred == 1 else DESIGN["success"]
+    pct = f"{prob * 100:.1f}%"
+
+    decision = (
+        f"Model indicates elevated failure risk ({pct}) above the decision threshold ({threshold:.2f}). "
+        "Schedule inspection or preventive maintenance. This is a model indication, not a guarantee of failure."
+        if pred == 1
+        else f"Model indicates normal operation ({pct}) below the decision threshold ({threshold:.2f}). "
+        "Continue monitoring according to the normal maintenance schedule."
+    )
+
+    st.markdown(
+        f"""
+        <div class="prediction-panel">
+            <div class="prediction-value" style="color:{color};">{pct}</div>
+            <div class="prediction-label" style="color:{color};">{label}</div>
+            <div class="prediction-meta">Risk: {risk} &nbsp;|&nbsp; Threshold: {threshold:.2f}</div>
+            <div class="prediction-decision">{decision}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Feature contributions
+# ---------------------------------------------------------------------------
+def feature_contribution_bars(
+    features: Sequence[tuple[str, float]],
+    top_n: int = 8,
+) -> None:
+    rows = []
+    for name, val in features[:top_n]:
+        display_name = name.replace("_", " ").title()
+        if len(display_name) > 28:
+            display_name = display_name[:25] + "..."
+        direction = "positive" if val >= 0 else "negative"
+        width = min(abs(val) * 400, 100)
+        color = DESIGN["accent"] if val >= 0 else DESIGN["success"]
+        sign = "+" if val >= 0 else ""
+        rows.append(
+            f"""
+            <div class="feature-row">
+                <div class="feature-name">{display_name}</div>
+                <div class="feature-bar-track">
+                    <div class="feature-bar-fill {direction}" style="width:{width}%;background-color:{color};"></div>
+                </div>
+                <div class="feature-value {direction}">{sign}{val:.4f}</div>
+            </div>
+            """
+        )
+    st.markdown("".join(rows), unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
+# Technical metadata
+# ---------------------------------------------------------------------------
+def technical_metadata(items: Sequence[tuple[str, str]]) -> None:
+    cells = []
+    for label, value in items:
+        cells.append(
+            f"""
+            <div class="meta-item">
+                <span class="identity-meta">{label}</span>
+                <span class="identity-value">{value}</span>
+            </div>
+            """
+        )
+    st.markdown(f'<div class="meta-strip">{"".join(cells)}</div>', unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
+# Sidebar nav rail
+# ---------------------------------------------------------------------------
+def nav_rail_item(label: str, page_key: str, active: bool = False, primary: bool = False) -> None:
+    if active:
+        st.markdown(
+            f'<button class="sidebar-nav-item active" disabled>{label}</button>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    style = ' style="color:#00d4ff;font-weight:600;"' if primary else ""
+    st.markdown(
+        f"""
+        <button class="sidebar-nav-item"{style}
+            onclick="window.parent.postMessage({{'type':'streamlit:setPage','page':'{page_key}'}}, '*')">
+            {label}
+        </button>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Compact alerts
+# ---------------------------------------------------------------------------
+def system_alert(message: str, level: str = "error") -> None:
+    st.markdown(
+        f'<div class="system-alert {level}">{message}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Command hero
+# ---------------------------------------------------------------------------
+def command_hero(title: str, subtitle: str, right_content: str = "") -> None:
+    st.markdown(
+        f"""
+        <div class="command-hero">
+            <div class="command-hero-grid">
+                <div class="command-primary">
+                    <div class="hero-title">{title}</div>
+                    <div class="hero-subtitle">{subtitle}</div>
+                </div>
+                <div class="command-secondary">
+                    {right_content}
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Instrumentation inputs
+# ---------------------------------------------------------------------------
+def instrument_input(label: str, widget_html: str) -> None:
+    st.markdown(
+        f"""
+        <div class="instrument-item">
+            <span class="instrument-name">{label}</span>
+            {widget_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Report center
+# ---------------------------------------------------------------------------
+def report_row(title: str, meta: str, download_fn) -> None:
+    st.markdown(
+        f"""
+        <div class="report-item">
+            <div>
+                <div class="report-title">{title}</div>
+                <div class="report-meta">{meta}</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    download_fn()
+
+
+# ---------------------------------------------------------------------------
+# Backward compatibility
+# ---------------------------------------------------------------------------
+def render_page_header(title: str, subtitle: str | None = None) -> None:
+    page_header(title, subtitle or "")
+
+
+def render_section_header(title: str) -> None:
+    section_header(title)
+
+
+def render_metric_card(title: str, value: str, color: str | None = None) -> None:
+    c = color or DESIGN["text_primary"]
+    st.markdown(
+        f"""
+        <div style="padding:1rem 0;border-bottom:1px solid #21262d;">
+            <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#484f58;margin-bottom:0.35rem;">{title}</div>
+            <div style="font-size:1.5rem;font-weight:800;color:{c};letter-spacing:-0.02em;">{value}</div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
@@ -37,12 +361,6 @@ def render_metric_row(
     metrics: Sequence[tuple[str, str, str | None]],
     columns: int = 4,
 ) -> None:
-    """Render a row of metric cards.
-
-    Args:
-        metrics: Sequence of (title, value, color) tuples.
-        columns: Number of columns per row.
-    """
     for i in range(0, len(metrics), columns):
         chunk = metrics[i : i + columns]
         cols = st.columns(len(chunk))
@@ -51,13 +369,27 @@ def render_metric_row(
                 render_metric_card(title, value, color)
 
 
+def render_status_dot(status: str = "ready") -> str:
+    color = {"ready": DESIGN["success"], "warn": DESIGN["warning"], "error": DESIGN["error"]}.get(
+        status, DESIGN["text_muted"]
+    )
+    return f'<span style="width:6px;height:6px;border-radius:50%;background-color:{color};display:inline-block;"></span>'
+
+
+def card_html(title: str, value: str, color: str) -> str:
+    return (
+        f'<div style="padding:1rem 0;border-bottom:1px solid #21262d;">'
+        f'<div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#484f58;margin-bottom:0.35rem;">{title}</div>'
+        f'<div style="font-size:1.5rem;font-weight:800;color:{color};letter-spacing:-0.02em;">{value}</div></div>'
+    )
+
+
 def render_info_card(title: str, content: str) -> None:
-    """Render an informational card with title and body text."""
     st.markdown(
         f"""
-        <div class="info-card">
-            <div class="title">{title}</div>
-            <div class="text">{content}</div>
+        <div style="padding:0.75rem 0;border-bottom:1px solid #161c24;">
+            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#00d4ff;margin-bottom:0.35rem;">{title}</div>
+            <div style="font-size:0.8rem;color:#8b949e;line-height:1.5;">{content}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -65,103 +397,54 @@ def render_info_card(title: str, content: str) -> None:
 
 
 def render_action_card(title: str, content: str) -> None:
-    """Render a recommended action card."""
     st.markdown(
         f"""
-        <div class="action-box">
-            <div class="title">{title}</div>
-            <div class="text">{content}</div>
+        <div style="padding:0.75rem 0;border-bottom:1px solid #161c24;">
+            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#00d4ff;margin-bottom:0.35rem;">{title}</div>
+            <div style="font-size:0.8rem;color:#8b949e;line-height:1.5;">{content}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-def render_status_dot(status: str = "ready") -> str:
-    """Return HTML for a status dot."""
-    css_class = f"status-{status}"
-    return f'<span class="status-dot {css_class}"></span>'
-
-
 def render_highlight(text: str) -> None:
-    """Render a highlighted feature/checklist item."""
     st.markdown(
-        f"<div class='highlight-item'>"
-        f"<span class='icon'>✓</span>{text}</div>",
+        f"<div style='display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;"
+        f"font-size:0.85rem;color:#e6edf3;'><span style='color:#00c853;font-weight:700;'>✓</span>{text}</div>",
         unsafe_allow_html=True,
     )
 
 
 def render_prediction_card(result: dict, threshold: float) -> None:
-    """Render the prediction result card with probability and risk."""
-    pred = result["prediction"]
-    prob = result["probability"]
-    risk = result["risk_level"]
-
-    label = "FAILURE" if pred == 1 else "NORMAL"
-    color = DESIGN["error"] if pred == 1 else DESIGN["success"]
-
-    st.markdown(
-        f"""
-        <div class="prediction-card" style="border-left-color:{color};">
-            <div class="prob" style="color:{color};">{prob * 100:.1f}%</div>
-            <div class="label" style="color:{color};">{label}</div>
-            <div class="meta">Risk Level: {risk} &nbsp;|&nbsp;
-                Threshold: {threshold:.2f}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.progress(prob, text=f"{prob:.1%}")
-
-    if pred == 1:
-        st.info(
-            f"Model indicates elevated failure risk ({prob * 100:.1f}%) "
-            f"above the decision threshold ({threshold:.2f})."
-        )
-        render_action_card(
-            "Recommended Action",
-            "Schedule inspection or preventive maintenance as soon as "
-            "practical. This is a model indication, not a guarantee of failure.",
-        )
-    else:
-        st.info(
-            f"Model indicates normal operation ({prob * 100:.1f}%) "
-            f"below the decision threshold ({threshold:.2f})."
-        )
-        render_action_card(
-            "Recommended Action",
-            "Continue monitoring according to the normal maintenance "
-            "schedule. This is a model indication, not a guarantee of "
-            "continued operation.",
-        )
-
-
-def card_html(title: str, value: str, color: str) -> str:
-    """Generate HTML for a metric card."""
-    return (
-        f'<div style="background:#141A22;border-radius:12px;padding:18px 16px;'
-        f"text-align:center;border:1px solid #1E2630;"
-        f"border-left:4px solid {color};'>"
-        f'<div style="font-size:0.7rem;color:#6b6b7b;text-transform:uppercase;'
-        f"letter-spacing:0.8px;margin-bottom:6px;\">"
-        f"{title}</div>"
-        f'<div style="font-size:1.6rem;font-weight:700;color:{color};'
-        f"line-height:1.2;\">"
-        f"{value}</div></div>"
-    )
+    prediction_panel(result, threshold)
 
 
 __all__ = [
+    "page_header",
+    "section_header",
+    "section_title",
+    "metric_mega",
+    "metric_large",
+    "metric_editorial_row",
+    "status_indicator",
+    "risk_badge",
+    "risk_scale",
+    "telemetry_row",
+    "prediction_panel",
+    "feature_contribution_bars",
+    "technical_metadata",
+    "nav_rail_item",
+    "system_alert",
+    "command_hero",
     "render_page_header",
     "render_section_header",
     "render_metric_card",
     "render_metric_row",
+    "render_status_dot",
+    "card_html",
     "render_info_card",
     "render_action_card",
-    "render_status_dot",
     "render_highlight",
     "render_prediction_card",
-    "card_html",
 ]
