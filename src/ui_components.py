@@ -91,7 +91,7 @@ def render_html(html: str) -> None:
         raise TypeError(
             f"render_html expected str, got {type(html).__name__}: {html!r}"
         )
-    st.markdown(html, unsafe_allow_html=True)
+    st.html(html)
 
 
 def page_header(title: str, subtitle: str) -> None:

@@ -35,15 +35,19 @@ from src.ui_components import (
 class TestRenderHtml:
     """Centralized HTML renderer must always use the trusted Streamlit API."""
 
-    def test_calls_markdown_with_unsafe_html(self) -> None:
+    def test_calls_html(self) -> None:
         mock_st = MagicMock()
         with patch("src.ui_components.st", mock_st):
             render_html("<div>test</div>")
 
-        mock_st.markdown.assert_called_once_with(
-            "<div>test</div>",
-            unsafe_allow_html=True,
-        )
+        mock_st.html.assert_called_once_with("<div>test</div>")
+
+    def test_does_not_call_markdown(self) -> None:
+        mock_st = MagicMock()
+        with patch("src.ui_components.st", mock_st):
+            render_html("<div>test</div>")
+
+        mock_st.markdown.assert_not_called()
 
     def test_does_not_call_write(self) -> None:
         mock_st = MagicMock()
@@ -71,35 +75,68 @@ class TestRenderHtml:
         with pytest.raises(TypeError, match="render_html expected str"):
             render_html(["<div>", "</div>"])
 
+    def test_render_html_multiple_divs_uses_html(self) -> None:
+        mock_st = MagicMock()
+        with patch("src.ui_components.st", mock_st):
+            render_html("<div>ONE</div><div>TWO</div><div>THREE</div>")
+
+        mock_st.html.assert_called_once()
+        mock_st.markdown.assert_not_called()
+
+    def test_telemetry_multiline_html_passes_to_html(self) -> None:
+        html = """
+        <div class="telemetry-grid">
+
+            <div class="telemetry-item">
+                <div class="telemetry-label">Air Temperature</div>
+            </div>
+
+            <div class="telemetry-item">
+                <div class="telemetry-label">Process Temperature</div>
+            </div>
+
+            <div class="telemetry-item">
+                <div class="telemetry-label">Rotational Speed</div>
+            </div>
+
+        </div>
+        """
+        mock_st = MagicMock()
+        with patch("src.ui_components.st", mock_st):
+            render_html(html)
+
+        mock_st.html.assert_called_once_with(html)
+        mock_st.markdown.assert_not_called()
+
 
 class TestComponentsUseCentralizedRenderer:
     """Every HTML-producing component must route through render_html."""
 
-    def _collect_st_markdown_calls(self, func, *args, **kwargs):
+    def _collect_st_html_calls(self, func, *args, **kwargs):
         mock_st = MagicMock()
         with patch("src.ui_components.st", mock_st):
             func(*args, **kwargs)
-        return [call.args for call in mock_st.markdown.call_args_list]
+        return [call.args for call in mock_st.html.call_args_list]
 
     def test_page_header_uses_render_html(self) -> None:
-        calls = self._collect_st_markdown_calls(page_header, "Title", "Subtitle")
+        calls = self._collect_st_html_calls(page_header, "Title", "Subtitle")
         assert len(calls) == 1
         html = calls[0][0]
         assert "<div" in html
         assert "page-identity" in html
 
     def test_section_header_uses_render_html(self) -> None:
-        calls = self._collect_st_markdown_calls(section_header, "Section")
+        calls = self._collect_st_html_calls(section_header, "Section")
         assert len(calls) == 1
         assert calls[0] == ('<div class="section-label">Section</div>',)
 
     def test_section_title_uses_render_html(self) -> None:
-        calls = self._collect_st_markdown_calls(section_title, "Title")
+        calls = self._collect_st_html_calls(section_title, "Title")
         assert len(calls) == 1
         assert calls[0] == ('<div class="section-title">Title</div>',)
 
     def test_telemetry_row_uses_render_html(self) -> None:
-        calls = self._collect_st_markdown_calls(
+        calls = self._collect_st_html_calls(
             telemetry_row,
             [("Temp", "298.0", "K", "ready")],
         )
@@ -109,7 +146,7 @@ class TestComponentsUseCentralizedRenderer:
         assert "telemetry-grid" in html
 
     def test_metric_editorial_row_uses_render_html(self) -> None:
-        calls = self._collect_st_markdown_calls(
+        calls = self._collect_st_html_calls(
             metric_editorial_row,
             [("Accuracy", "0.95", "#00d4ff")],
         )
@@ -119,7 +156,7 @@ class TestComponentsUseCentralizedRenderer:
         assert "metric-editorial-row" in html
 
     def test_technical_metadata_uses_render_html(self) -> None:
-        calls = self._collect_st_markdown_calls(
+        calls = self._collect_st_html_calls(
             technical_metadata,
             [("Engine", "XGBoost")],
         )
@@ -129,7 +166,7 @@ class TestComponentsUseCentralizedRenderer:
         assert "meta-strip" in html
 
     def test_prediction_panel_uses_render_html(self) -> None:
-        calls = self._collect_st_markdown_calls(
+        calls = self._collect_st_html_calls(
             prediction_panel,
             {"prediction": 1, "probability": 0.75, "risk_level": "High"},
             0.5,
@@ -139,7 +176,7 @@ class TestComponentsUseCentralizedRenderer:
         assert "prediction-panel" in html
 
     def test_feature_contribution_bars_uses_render_html(self) -> None:
-        calls = self._collect_st_markdown_calls(
+        calls = self._collect_st_html_calls(
             feature_contribution_bars,
             [("feature_a", 0.5)],
         )
@@ -148,32 +185,32 @@ class TestComponentsUseCentralizedRenderer:
         assert "feature-row" in html
 
     def test_status_indicator_uses_render_html(self) -> None:
-        calls = self._collect_st_markdown_calls(status_indicator, "ready", "OK")
+        calls = self._collect_st_html_calls(status_indicator, "ready", "OK")
         assert len(calls) == 1
         html = calls[0][0]
         assert "<span" in html
 
     def test_risk_badge_uses_render_html(self) -> None:
-        calls = self._collect_st_markdown_calls(risk_badge, "HIGH")
+        calls = self._collect_st_html_calls(risk_badge, "HIGH")
         assert len(calls) == 1
         html = calls[0][0]
         assert "HIGH" in html
 
     def test_risk_scale_uses_render_html(self) -> None:
-        calls = self._collect_st_markdown_calls(risk_scale, 0.7, 0.5)
+        calls = self._collect_st_html_calls(risk_scale, 0.7, 0.5)
         assert len(calls) == 1
         html = calls[0][0]
         assert "risk-scale" in html
 
     def test_system_alert_uses_render_html(self) -> None:
-        calls = self._collect_st_markdown_calls(system_alert, "Alert", "error")
+        calls = self._collect_st_html_calls(system_alert, "Alert", "error")
         assert len(calls) == 1
         html = calls[0][0]
         assert "system-alert" in html
         assert "Alert" in html
 
     def test_command_hero_uses_render_html(self) -> None:
-        calls = self._collect_st_markdown_calls(
+        calls = self._collect_st_html_calls(
             command_hero, "Hero", "Subtitle", "<span>right</span>"
         )
         assert len(calls) == 1
@@ -278,6 +315,12 @@ class TestComponentReturnValues:
 class TestHtmlCompleteness:
     """Multi-item components must include every item in a single render call."""
 
+    def _collect_st_html_calls(self, func, *args, **kwargs):
+        mock_st = MagicMock()
+        with patch("src.ui_components.st", mock_st):
+            func(*args, **kwargs)
+        return [call.args for call in mock_st.html.call_args_list]
+
     def test_telemetry_row_includes_all_five_production_items(self) -> None:
         items = [
             ("Air Temperature", "298.0", "K", "ready"),
@@ -286,7 +329,7 @@ class TestHtmlCompleteness:
             ("Torque", "40.0", "Nm", "ready"),
             ("Tool Wear", "50.0", "min", "ready"),
         ]
-        calls = self._collect_st_markdown_calls(telemetry_row, items)
+        calls = self._collect_st_html_calls(telemetry_row, items)
         assert len(calls) == 1
         html = calls[0][0]
         for label, value, unit, _ in items:
@@ -302,7 +345,7 @@ class TestHtmlCompleteness:
             ("Torque", "40.0", "Nm", "ready"),
             ("Tool Wear", "50.0", "min", "ready"),
         ]
-        calls = self._collect_st_markdown_calls(telemetry_row, items)
+        calls = self._collect_st_html_calls(telemetry_row, items)
         html = calls[0][0]
         assert html.count("<div") == html.count("</div>")
         assert html.count("<span") == html.count("</span>")
@@ -314,7 +357,7 @@ class TestHtmlCompleteness:
             ("F1 Score", "0.89", "#00d4ff"),
             ("Models", "3", "#8b949e"),
         ]
-        calls = self._collect_st_markdown_calls(metric_editorial_row, metrics)
+        calls = self._collect_st_html_calls(metric_editorial_row, metrics)
         assert len(calls) == 1
         html = calls[0][0]
         for label, value, _ in metrics:
@@ -328,7 +371,7 @@ class TestHtmlCompleteness:
             ("Dataset", "AI4I 2020"),
             ("Processed Rows", "10000"),
         ]
-        calls = self._collect_st_markdown_calls(technical_metadata, items)
+        calls = self._collect_st_html_calls(technical_metadata, items)
         assert len(calls) == 1
         html = calls[0][0]
         for label, value in items:
@@ -341,18 +384,12 @@ class TestHtmlCompleteness:
             ("process_temperature", -0.3),
             ("rotational_speed", 0.8),
         ]
-        calls = self._collect_st_markdown_calls(feature_contribution_bars, features)
+        calls = self._collect_st_html_calls(feature_contribution_bars, features)
         assert len(calls) == 1
         html = calls[0][0]
         for name, _ in features:
             display = name.replace("_", " ").title()
             assert display in html
-
-    def _collect_st_markdown_calls(self, func, *args, **kwargs):
-        mock_st = MagicMock()
-        with patch("src.ui_components.st", mock_st):
-            func(*args, **kwargs)
-        return [call.args for call in mock_st.markdown.call_args_list]
 
 
 class TestRawHtmlNotRenderedAsPlainText:
