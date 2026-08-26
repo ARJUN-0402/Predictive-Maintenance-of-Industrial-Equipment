@@ -4,10 +4,6 @@
 An end-to-end machine-learning platform for predicting industrial equipment failure risk,
 optimizing operational decision thresholds, and explaining model decisions using SHAP and LIME.
 
-<p align="center">
-  <img src="https://skillicons.dev/icons?i=python,pandas,numpy,sklearn,xgboost,shap,lime,plotly,matplotlib,streamlit,docker,git,pytest" />
-</p>
-
 ---
 
 ## 🚀 Live Demo
@@ -30,36 +26,19 @@ Repository: **[GitHub](https://github.com/ARJUN-0402/Predictive-Maintenance-of-I
 ## 🧰 Skills & Technologies
 
 ### Machine Learning
+![Python](https://img.shields.io/badge/Python-14354C?style=for-the-badge&logo=python&logoColor=white) ![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white) ![NumPy](https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white) ![Scikit-learn](https://img.shields.io/badge/Scikit-learn-F7931A?style=for-the-badge&logo=scikit-learn&logoColor=white) ![XGBoost](https://img.shields.io/badge/XGBoost-119AD0?style=for-the-badge&logo=xgboost&logoColor=white)
 
-<p>
-  <img src="https://skillicons.dev/icons?i=python,pandas,numpy,sklearn,xgboost" />
-</p>
-
-### Explainability
-
-<p>
-  <img src="https://skillicons.dev/icons?i=shap,lime" />
-</p>
+### Explainable AI
+![SHAP](https://img.shields.io/badge/SHAP-427B58?style=for-the-badge) ![LIME](https://img.shields.io/badge/LIME-FF6B6B?style=for-the-badge)
 
 ### Visualization
-
-<p>
-  <img src="https://skillicons.dev/icons?i=plotly,matplotlib" />
-</p>
+![Plotly](https://img.shields.io/badge/Plotly-239120?style=for-the-badge&logo=plotly&logoColor=white) ![Matplotlib](https://img.shields.io/badge/Matplotlib-11557C?style=for-the-badge&logo=matplotlib&logoColor=white)
 
 ### Application
+![Streamlit](https://img.shields.io/badge/Streamlit-F4B400?style=for-the-badge&logo=streamlit&logoColor=white)
 
-<p>
-  <img src="https://skillicons.dev/icons?i=streamlit" />
-</p>
-
-### Engineering
-
-<p>
-  <img src="https://skillicons.dev/icons?i=docker,git,github,pytest" />
-</p>
-
----
+### Engineering & DevOps
+![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white) ![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![Pytest](https://img.shields.io/badge/Pytest-FTFF00?style=for-the-badge&logo=pytest&logoColor=black) ![Ruff](https://img.shields.io/badge/Ruff-FA6161?style=for-the-badge) ![Mypy](https://img.shields.io/badge/Mypy-013243?style=for-the-badge&logo=mypy&logoColor=white)
 
 ## 📋 Skills Summary Table
 
@@ -75,52 +54,6 @@ Repository: **[GitHub](https://github.com/ARJUN-0402/Predictive-Maintenance-of-I
 | Code Quality | Ruff, Mypy |
 | Deployment | Docker, Streamlit Cloud |
 | Version Control | Git, GitHub |
-
----
-
-## 🚀 Live Demo (expanded)
-
-**[Open Predictive Maintenance AI →](https://predictive-maintenance-of-industrial-equipment.streamlit.app/)**
-
-The application provides the following capabilities through its web interface:
-
-- **Manual prediction** — use interactive sliders to input sensor readings (Air Temperature [K], Process Temperature [K], Rotational Speed [rpm], Torque [Nm], Tool Wear [min], Machine Type) and get an instant failure probability with risk level and recommended action
-- **Batch CSV upload** — upload a CSV file with the same columns to get bulk predictions, probabilities, and downloadable results
-- **SHAP explainability** — per-prediction waterfall/force plots showing which features pushed the prediction up or down toward failure
-- **LIME explainability** — local interpretable feature contributions for each prediction
-- **Model evaluation** — ROC curve, precision-recall curve, confusion matrices, and classification metrics (accuracy, precision, recall, F1, ROC-AUC) for XGBoost, Random Forest, Gradient Boosting, and Logistic Regression
-- **Threshold optimization** — configurable decision thresholds with F1-maximizing and recall-oriented strategies; thresholds are persisted in the model registry
-- **Dataset exploration** — view the AI4I 2020 dataset structure, row count, feature count, class distribution, and failure type breakdown
-- **EDA visualizations** — correlation matrix, numeric distributions, and failure type breakdown charts
-- **Report generation** — download ROC curves, precision-recall curves, confusion matrices, classification reports, model comparison CSV, trained model (.pkl), scaler (.pkl), model registry (.json), SHAP summary, and PDF report
-
----
-
-## Product Preview
-
-<div style="display:flex;justify-content:center;gap:2rem;margin:1.5rem 0;">
-  <div style="flex:1;">
-    <img src="screenshots/dashboard.png" width="100%" alt="Dashboard — operational command center with real-time telemetry, model status, and key metrics">
-    <br><sub>Dashboard</sub>
-  </div>
-  <div style="flex:1;">
-    <img src="screenshots/predict.png" width="100%" alt="Predict Failure — manual slider input or CSV batch upload with adjustable decision threshold">
-    <br><sub>Predict Failure</sub>
-  </div>
-</div>
-
-<div style="display:flex;justify-content:center;gap:2rem;margin:1.5rem 0;">
-  <div style="flex:1;">
-    <img src="screenshots/explain.png" width="100%" alt="Explain Prediction — SHAP waterfall/force plots and LIME bar charts per prediction">
-    <br><sub>Explain Prediction</sub>
-  </div>
-  <div style="flex:1;">
-    <img src="screenshots/evaluation.png" width="100%" alt="Model Evaluation — ROC curve, precision-recall curve, confusion matrices, threshold analysis">
-    <br><sub>Model Evaluation</sub>
-  </div>
-</div>
-
-*Screenshot assets can be added under `screenshots/` when captured. Placeholder images above illustrate the industrial AI command center UI.*
 
 ---
 
@@ -360,7 +293,6 @@ Verified current results:
 | Check | Status |
 |---|---|
 | Pytest | ✅ 162 passed |
-| Ruff | ⚠️ Not configured in this project |
 | Mypy | ✅ Passing |
 | Flake8 | ✅ Passing |
 | Python compilation | ✅ Passing |
@@ -423,7 +355,7 @@ docker run -p 8501:8501 predictive-maintenance
 
 The app will be available at `http://localhost:8501`.
 
-*Dockerfile uses `python:3.12-slim` and runs `streamlit run app/streamlit_app.py`.*
+*Dockerfile uses `python:3.12-slim` and runs `streamlit run streamlit_app.py`.*
 
 ---
 
