@@ -16,7 +16,10 @@ DESIGN = {
     "border": "#21262d",
     "border_dim": "#161c24",
     "font_mono": "SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace",
-    "font_sans": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    "font_sans": (
+        "-apple-system, BlinkMacSystemFont, "
+        "'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    ),
 }
 
 CSS = """
@@ -26,7 +29,8 @@ CSS = """
 html, body { margin: 0; padding: 0; }
 .stApp {
     background-color: #080B0F;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont,
+        'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     color: #e6edf3;
 }
 
@@ -841,20 +845,56 @@ hr {
 
 /* === Legacy CSS class names (backward compatibility) === */
 .metric-card { padding: 1rem 0; border-bottom: 1px solid #21262d; }
-.metric-card .label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #484f58; margin-bottom: 0.35rem; }
+.metric-card .label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #484f58;
+    margin-bottom: 0.35rem;
+}
 .metric-card .value { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
-.prediction-card { padding: 1.5rem; background-color: #0D1117; border: 1px solid #21262d; margin: 1rem 0; }
-.prediction-card .prob { font-size: clamp(3.5rem, 7vw, 6rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
-.prediction-card .label { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.prediction-card {
+    padding: 1.5rem;
+    background-color: #0D1117;
+    border: 1px solid #21262d;
+    margin: 1rem 0;
+}
+.prediction-card .prob {
+    font-size: clamp(3.5rem, 7vw, 6rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+}
+.prediction-card .label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
 .prediction-card .meta { font-size: 0.75rem; color: #8b949e; margin-top: 0.5rem; }
-.section-title { font-size: 1.1rem; font-weight: 600; color: #e6edf3; margin-bottom: 0.75rem; margin-top: 1.75rem; letter-spacing: -0.01em; }
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #e6edf3;
+    margin-bottom: 0.75rem;
+    margin-top: 1.75rem;
+    letter-spacing: -0.01em;
+}
 .hero { padding: 2rem 0; border-bottom: 1px solid #21262d; margin-bottom: 1.5rem; }
 .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
 .status-ready { background-color: #00c853; }
 .status-warn { background-color: #ffab00; }
 .status-error { background-color: #ff4b4b; }
 .action-box { padding: 0.75rem 0; border-bottom: 1px solid #161c24; }
-.action-box .title { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #00d4ff; margin-bottom: 0.35rem; }
+.action-box .title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #00d4ff;
+    margin-bottom: 0.35rem;
+}
 .action-box .text { font-size: 0.8rem; color: #8b949e; line-height: 1.5; }
 </style>
 """

@@ -37,15 +37,15 @@ def test_display_prediction_card_no_format_keyword() -> None:
 
     assert mock_progress.called, "st.progress should be called"
     call_kwargs = mock_progress.call_args.kwargs
-    assert "format" not in call_kwargs, (
-        "st.progress must not receive a 'format' keyword argument"
-    )
-    assert call_kwargs.get("text") == "0.1%", (
-        f"Expected text='0.1%', got text={call_kwargs.get('text')!r}"
-    )
-    assert mock_progress.call_args.args[0] == 0.001, (
-        "Progress value should be numeric probability in [0, 1]"
-    )
+    assert (
+        "format" not in call_kwargs
+    ), "st.progress must not receive a 'format' keyword argument"
+    assert (
+        call_kwargs.get("text") == "0.1%"
+    ), f"Expected text='0.1%', got text={call_kwargs.get('text')!r}"
+    assert (
+        mock_progress.call_args.args[0] == 0.001
+    ), "Progress value should be numeric probability in [0, 1]"
 
 
 def test_display_prediction_card_failure_format() -> None:

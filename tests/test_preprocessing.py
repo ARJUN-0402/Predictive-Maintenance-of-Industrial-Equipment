@@ -48,9 +48,9 @@ def test_preprocessing_scaling_zero_mean(sample_df: pd.DataFrame) -> None:
     numeric_cols = [c for c in X_train_proc.columns if c not in exclude_cols]
     means = X_train_proc[numeric_cols].mean()
     for col_name, col_mean in means.items():
-        assert abs(col_mean) < 1e-10, (
-            f"Column {col_name} mean should be ~0 after scaling, got {col_mean}"
-        )
+        assert (
+            abs(col_mean) < 1e-10
+        ), f"Column {col_name} mean should be ~0 after scaling, got {col_mean}"
 
 
 def test_preprocessing_no_data_leakage(sample_df: pd.DataFrame) -> None:
@@ -71,9 +71,9 @@ def test_preprocessing_no_data_leakage(sample_df: pd.DataFrame) -> None:
         pd.concat([X_test, y_test], axis=1), preprocessor=preprocessor, fit=False
     )
 
-    assert X_train_proc.shape[1] == X_test_proc.shape[1], (
-        "Train and test must have same number of features"
-    )
+    assert (
+        X_train_proc.shape[1] == X_test_proc.shape[1]
+    ), "Train and test must have same number of features"
 
 
 def test_preprocessing_drops_udi(sample_df: pd.DataFrame) -> None:

@@ -52,7 +52,9 @@ class TestClassifyRisk:
         assert _classify_risk(0.29, threshold=0.5) == "Low"
 
     def test_all_levels_covered(self) -> None:
-        levels = {_classify_risk(p, threshold=0.5) for p in [0.05, 0.4, 0.55, 0.8, 0.99]}
+        levels = {
+            _classify_risk(p, threshold=0.5) for p in [0.05, 0.4, 0.55, 0.8, 0.99]
+        }
         assert levels == {"Low", "Medium", "High"}
 
 
@@ -76,7 +78,14 @@ class TestDesignTokens:
     """Tests for design token consistency."""
 
     def test_required_colors_present(self) -> None:
-        required = ["accent", "success", "warning", "error", "bg_primary", "text_primary"]
+        required = [
+            "accent",
+            "success",
+            "warning",
+            "error",
+            "bg_primary",
+            "text_primary",
+        ]
         for key in required:
             assert key in DESIGN, f"Missing design token: {key}"
 

@@ -235,7 +235,8 @@ def _render_sidebar() -> None:
             render_html('<div class="sidebar-status">● SYSTEM ONLINE</div>')
         else:
             render_html(
-                '<div class="sidebar-status" style="color:#ffab00;">● SETUP REQUIRED</div>',
+                '<div class="sidebar-status" style="color:#ffab00;">'
+                "● SETUP REQUIRED</div>",
             )
 
         for group in NAV_GROUPS:
@@ -243,27 +244,35 @@ def _render_sidebar() -> None:
             for label, page_id, button_key in group["items"]:
                 active = current_page == page_id
                 primary = page_id == "Predict Failure"
-                nav_rail_item(label, page_id, button_key, active=active, primary=primary)
+                nav_rail_item(
+                    label, page_id, button_key, active=active, primary=primary
+                )
 
         render_html("<hr>")
 
         registry = load_registry_resource()
         versions = registry.get("versions", {})
-        xgb_versions = {k: v for k, v in versions.items() if v.get("model") == "xgboost"}
+        xgb_versions = {
+            k: v for k, v in versions.items() if v.get("model") == "xgboost"
+        }
 
         if xgb_versions:
             render_html(
                 """
-                <div style="padding:0 1rem;font-size:0.65rem;color:#484f58;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem;">
+                <div style="padding:0 1rem;font-size:0.65rem;color:#484f58;
+                    text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem;">
                     Model
                 </div>
-                <div style="padding:0 1rem;font-size:0.8rem;font-weight:700;color:#e6edf3;font-family:SFMono-Regular,Consolas,monospace;">
+                <div style="padding:0 1rem;font-size:0.8rem;font-weight:700;color:#e6edf3;
+                    font-family:SFMono-Regular,Consolas,monospace;">
                     XGB-01
                 </div>
-                <div style="padding:0.5rem 1rem 0;font-size:0.65rem;color:#484f58;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem;">
+                <div style="padding:0.5rem 1rem 0;font-size:0.65rem;color:#484f58;
+                    text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem;">
                     Explainability
                 </div>
-                <div style="padding:0 1rem 1rem;font-size:0.8rem;font-weight:700;color:#e6edf3;font-family:SFMono-Regular,Consolas,monospace;">
+                <div style="padding:0 1rem 1rem;font-size:0.8rem;font-weight:700;color:#e6edf3;
+                    font-family:SFMono-Regular,Consolas,monospace;">
                     SHAP + LIME
                 </div>
                 """,
@@ -297,7 +306,8 @@ def page_home() -> None:
 
     command_hero(
         "Machine Health",
-        "Equipment operational health index derived from real-time sensor telemetry and model inference.",
+        "Equipment operational health index derived from real-time sensor "
+        "telemetry and model inference.",
         right_content=right_meta,
     )
 
@@ -307,7 +317,8 @@ def page_home() -> None:
             """
             <div class="prediction-panel" style="border-left:3px solid #00d4ff;">
                 <div class="metric-mega" style="color:#00d4ff;">98.7%</div>
-                <div class="prediction-label" style="color:#e6edf3;margin-top:0.5rem;">Machine Health</div>
+                <div class="prediction-label"
+                    style="color:#e6edf3;margin-top:0.5rem;">Machine Health</div>
                 <div class="command-risk-badge">● Optimal Condition</div>
             </div>
             """,
@@ -316,10 +327,16 @@ def page_home() -> None:
         render_html(
             """
             <div class="prediction-panel" style="border-left:3px solid #00d4ff;">
-                <div class="metric-mega" style="font-size:clamp(2.5rem,5vw,4rem);color:#e6edf3;">0.1%</div>
-                <div class="prediction-label" style="color:#e6edf3;margin-top:0.5rem;">Failure Risk</div>
-                <div class="command-risk-badge" style="background-color:rgba(0,200,83,0.08);border-color:rgba(0,200,83,0.2);color:#00c853;">Low</div>
-                <div class="prediction-meta" style="margin-top:0.75rem;">Threshold 0.50</div>
+                <div class="metric-mega"
+                    style="font-size:clamp(2.5rem,5vw,4rem);color:#e6edf3;">0.1%</div>
+                <div class="prediction-label"
+                    style="color:#e6edf3;margin-top:0.5rem;">Failure Risk</div>
+                <div class="command-risk-badge"
+                    style="background-color:rgba(0,200,83,0.08);border-color:rgba(0,200,83,0.2);color:#00c853;">
+                    Low
+                </div>
+                <div class="prediction-meta"
+                    style="margin-top:0.75rem;">Threshold 0.50</div>
             </div>
             """,
         )
@@ -359,7 +376,9 @@ def page_home() -> None:
 
 def page_dataset_overview() -> None:
     """Render the dataset overview analytics workspace."""
-    page_header("Dataset Overview", "Inspect raw and processed equipment telemetry data")
+    page_header(
+        "Dataset Overview", "Inspect raw and processed equipment telemetry data"
+    )
 
     if st.session_state.df_raw is None:
         with st.spinner("Loading dataset..."):
@@ -376,7 +395,11 @@ def page_dataset_overview() -> None:
             ("Rows", f"{df_raw.shape[0]}", DESIGN["accent"]),
             ("Features", f"{df_raw.shape[1]}", DESIGN["text_primary"]),
             ("Failure Rate", f"{failure_rate:.2f}%", DESIGN["warning"]),
-            ("Missing Values", f"{df_raw.isnull().sum().sum()}", DESIGN["text_secondary"]),
+            (
+                "Missing Values",
+                f"{df_raw.isnull().sum().sum()}",
+                DESIGN["text_secondary"],
+            ),
         ]
     )
 
@@ -413,8 +436,16 @@ def page_dataset_overview() -> None:
         metric_editorial_row(
             [
                 ("Duplicate Rows", f"{duplicates}", dup_color),
-                ("Numeric Columns", f"{len(df_raw.select_dtypes(include='number').columns)}", DESIGN["accent"]),
-                ("Categorical Columns", f"{len(df_raw.select_dtypes(include='object').columns)}", DESIGN["accent"]),
+                (
+                    "Numeric Columns",
+                    f"{len(df_raw.select_dtypes(include='number').columns)}",
+                    DESIGN["accent"],
+                ),
+                (
+                    "Categorical Columns",
+                    f"{len(df_raw.select_dtypes(include='object').columns)}",
+                    DESIGN["accent"],
+                ),
             ]
         )
 
@@ -440,14 +471,23 @@ def page_dataset_overview() -> None:
                 )
                 st.dataframe(X_test.head(100), use_container_width=True)
             except Exception as e:
-                system_alert(f"Processed data not yet available. Train models first. Error: {e}", level="warning")
+                system_alert(
+                    f"Processed data not yet available. Train models first. Error: {e}",
+                    level="warning",
+                )
         else:
-            system_alert("Processed data not yet available. Use Train Model to generate it.", level="warning")
+            system_alert(
+                "Processed data not yet available. Use Train Model to generate it.",
+                level="warning",
+            )
 
 
 def page_eda() -> None:
     """Render the exploratory data analysis workspace."""
-    page_header("Exploratory Data Analysis", "Statistical analysis and visualizations of equipment sensor data")
+    page_header(
+        "Exploratory Data Analysis",
+        "Statistical analysis and visualizations of equipment sensor data",
+    )
 
     if st.session_state.df_raw is None:
         st.session_state.df_raw = load_dataset()
@@ -461,12 +501,14 @@ def page_eda() -> None:
         "Tool wear [min]",
     ]
 
-    tab_overview, tab_distributions, tab_correlations, tab_failures = st.tabs([
-        "Overview",
-        "Distributions",
-        "Correlations",
-        "Failure Patterns",
-    ])
+    tab_overview, tab_distributions, tab_correlations, tab_failures = st.tabs(
+        [
+            "Overview",
+            "Distributions",
+            "Correlations",
+            "Failure Patterns",
+        ]
+    )
 
     with tab_overview:
         section_header("Dataset Statistics")
@@ -476,7 +518,9 @@ def page_eda() -> None:
         section_header("Feature Distributions")
         selected_feature = st.selectbox("Select Feature", numeric_cols, index=0)
         fig = px.histogram(
-            df, x=selected_feature, nbins=50,
+            df,
+            x=selected_feature,
+            nbins=50,
             color="Machine failure",
             color_discrete_map={0: "#00c853", 1: "#ff4b4b"},
             template="plotly_dark",
@@ -503,7 +547,9 @@ def page_eda() -> None:
         c1, c2 = st.columns(2)
         with c1:
             fig = px.box(
-                df, x="Type", y="Process temperature [K]",
+                df,
+                x="Type",
+                y="Process temperature [K]",
                 color="Type",
                 template="plotly_dark",
                 title="Process Temperature by Machine Type",
@@ -511,22 +557,30 @@ def page_eda() -> None:
             st.plotly_chart(fig, use_container_width=True)
         with c2:
             fig = px.scatter(
-                df, x="Rotational speed [rpm]", y="Torque [Nm]",
+                df,
+                x="Rotational speed [rpm]",
+                y="Torque [Nm]",
                 color="Machine failure",
                 color_discrete_map={0: "#00c853", 1: "#ff4b4b"},
                 template="plotly_dark",
                 opacity=0.5,
                 title="Torque vs Rotational Speed",
             )
-            fig.update_layout(xaxis_title="Rotational speed [rpm]", yaxis_title="Torque [Nm]")
+            fig.update_layout(
+                xaxis_title="Rotational speed [rpm]", yaxis_title="Torque [Nm]"
+            )
             st.plotly_chart(fig, use_container_width=True)
 
     with tab_failures:
         section_header("Failure Type Distribution")
         failure_cols = ["TWF", "HDF", "PWF", "OSF", "RNF"]
-        failure_data = df[failure_cols].melt(var_name="Failure Type", value_name="Count")
+        failure_data = df[failure_cols].melt(
+            var_name="Failure Type", value_name="Count"
+        )
         fig = px.histogram(
-            failure_data, x="Failure Type", color="Failure Type",
+            failure_data,
+            x="Failure Type",
+            color="Failure Type",
             template="plotly_dark",
             title="Failure Type Occurrences",
         )
@@ -540,7 +594,10 @@ def page_train_model() -> None:
     if artifacts_exist():
         system_alert("Pretrained model artifacts detected.", level="success")
     else:
-        system_alert("No pretrained artifacts found. Training will generate them.", level="warning")
+        system_alert(
+            "No pretrained artifacts found. Training will generate them.",
+            level="warning",
+        )
 
     if not st.session_state.training_in_progress:
         if st.button("Retrain Models", type="primary", use_container_width=True):
@@ -594,7 +651,9 @@ def page_train_model() -> None:
 
 def page_predict_failure() -> None:
     """Render the failure prediction workspace."""
-    page_header("Predict Failure", "Configure equipment parameters and run failure prediction")
+    page_header(
+        "Predict Failure", "Configure equipment parameters and run failure prediction"
+    )
 
     if not artifacts_exist():
         _artifact_warning()
@@ -613,7 +672,8 @@ def page_predict_failure() -> None:
     section_title("Decision Threshold")
     threshold = st.slider(
         "Threshold",
-        0.1, 0.9,
+        0.1,
+        0.9,
         float(recommended_threshold),
         0.05,
         help=(
@@ -624,8 +684,8 @@ def page_predict_failure() -> None:
     )
     render_html(
         f"<div style='font-size:0.75rem;color:#8b949e;margin-top:0.25rem;'>"
-        f"Current: <span style='color:#00d4ff;font-weight:700;'>{threshold:.2f}</span> — "
-        f"{'More sensitive' if threshold < 0.5 else 'Less sensitive'}</div>",
+        f"Current: <span style='color:#00d4ff;font-weight:700;'>{threshold:.2f}"
+        f"</span> — {'More sensitive' if threshold < 0.5 else 'Less sensitive'}</div>",
     )
 
     tab_a, tab_b = st.tabs(["Manual Input", "Batch CSV Upload"])
@@ -637,7 +697,9 @@ def page_predict_failure() -> None:
         with col1:
             air_temp = st.slider("Air Temperature [K]", 290.0, 320.0, 298.0, 1.0)
         with col2:
-            process_temp = st.slider("Process Temperature [K]", 300.0, 350.0, 310.0, 1.0)
+            process_temp = st.slider(
+                "Process Temperature [K]", 300.0, 350.0, 310.0, 1.0
+            )
         with col3:
             rpm = st.slider("Rotational Speed [rpm]", 0.0, 3000.0, 1500.0, 10.0)
 
@@ -667,8 +729,12 @@ def page_predict_failure() -> None:
         for col, (lbl, val, unit) in zip([f1, f2, f3, f4, f5], features):
             with col:
                 render_html(
-                    f"<div style='font-size:0.65rem;color:#484f58;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.15rem;'>{lbl}</div>"
-                    f"<div style='font-size:1rem;font-weight:700;color:#e6edf3;font-family:SFMono-Regular,Consolas,monospace;'>{val} <span style='font-size:0.7rem;color:#8b949e;'>{unit}</span></div>",
+                    f"<div style='font-size:0.65rem;color:#484f58;"
+                    f"text-transform:uppercase;letter-spacing:0.06em;"
+                    f"margin-bottom:0.15rem;'>{lbl}</div>"
+                    f"<div style='font-size:1rem;font-weight:700;color:#e6edf3;"
+                    f"font-family:SFMono-Regular,Consolas,monospace;'>"
+                    f"{val} <span style='font-size:0.7rem;color:#8b949e;'>{unit}</span></div>",
                 )
 
         render_html("<br>")
@@ -738,7 +804,8 @@ def page_predict_failure() -> None:
                 missing_cols = [c for c in required_cols if c not in df_upload.columns]
                 if missing_cols:
                     system_alert(
-                        f"Uploaded CSV is missing required columns: {', '.join(missing_cols)}",
+                        f"Uploaded CSV is missing required columns: "
+                        f"{', '.join(missing_cols)}",
                         level="error",
                     )
                 else:
@@ -748,7 +815,9 @@ def page_predict_failure() -> None:
                             temp_path.parent.mkdir(parents=True, exist_ok=True)
                             df_upload.to_csv(temp_path, index=False)
                             try:
-                                results_df = batch_predict(temp_path, threshold=threshold)
+                                results_df = batch_predict(
+                                    temp_path, threshold=threshold
+                                )
                             finally:
                                 if temp_path.exists():
                                     os.remove(temp_path)
@@ -769,7 +838,10 @@ def page_predict_failure() -> None:
 
 def page_explain_prediction() -> None:
     """Render the explainable AI workspace."""
-    page_header("Explain Prediction", "Understand why the model makes specific predictions using SHAP and LIME")
+    page_header(
+        "Explain Prediction",
+        "Understand why the model makes specific predictions using SHAP and LIME",
+    )
 
     if not artifacts_exist():
         _artifact_warning()
@@ -790,7 +862,9 @@ def page_explain_prediction() -> None:
     try:
         explainer = get_shap_explainer(model)
         if explainer is None:
-            system_alert("SHAP explainer is unavailable for this model artifact.", level="error")
+            system_alert(
+                "SHAP explainer is unavailable for this model artifact.", level="error"
+            )
             return
 
         idx = st.slider("Sample Index", 0, len(X_test) - 1, 0)
@@ -804,7 +878,9 @@ def page_explain_prediction() -> None:
             key=lambda i: sample_shap[i],
             reverse=True,
         )[:5]
-        top_features_list = [(sample_data.index[i], sample_shap[i]) for i in top_positive]
+        top_features_list = [
+            (sample_data.index[i], sample_shap[i]) for i in top_positive
+        ]
 
         prob = model.predict_proba(X_test.iloc[[idx]])[0][1]
         pred_label = "FAILURE" if prob >= 0.5 else "NORMAL"
@@ -817,8 +893,10 @@ def page_explain_prediction() -> None:
             render_html(
                 f"""
                 <div class="prediction-panel" style="border-left:3px solid {color};">
-                    <div class="metric-large" style="color:{color};margin-bottom:0.25rem;">{prob * 100:.1f}%</div>
-                    <div class="prediction-label" style="color:{color};">{pred_label}</div>
+                    <div class="metric-large"
+                        style="color:{color};margin-bottom:0.25rem;">{prob * 100:.1f}%</div>
+                    <div class="prediction-label"
+                        style="color:{color};">{pred_label}</div>
                     <div class="prediction-meta">Risk: {risk}</div>
                 </div>
                 """,
@@ -827,9 +905,11 @@ def page_explain_prediction() -> None:
             render_html(
                 f"""
                 <div style="padding:1rem 0;">
-                    <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#484f58;margin-bottom:0.35rem;">Threshold</div>
+                    <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;
+                        text-transform:uppercase;color:#484f58;margin-bottom:0.35rem;">Threshold</div>
                     <div style="font-size:1.5rem;font-weight:800;color:#e6edf3;">0.50</div>
-                    <div style="font-size:0.75rem;color:#8b949e;margin-top:0.75rem;">Sample index: {idx}</div>
+                    <div style="font-size:0.75rem;color:#8b949e;margin-top:0.75rem;">
+                        Sample index: {idx}</div>
                 </div>
                 """,
             )
@@ -842,11 +922,13 @@ def page_explain_prediction() -> None:
         system_alert(f"SHAP explanation failed: {exc}", level="error")
         return
 
-    tab_shap, tab_lime, tab_technical = st.tabs([
-        "SHAP",
-        "LIME",
-        "Technical Details",
-    ])
+    tab_shap, tab_lime, tab_technical = st.tabs(
+        [
+            "SHAP",
+            "LIME",
+            "Technical Details",
+        ]
+    )
 
     with tab_shap:
         section_header("Model Explanation — SHAP")
@@ -878,9 +960,7 @@ def page_explain_prediction() -> None:
 
     with tab_lime:
         section_header("Local Explanation — LIME")
-        lime_idx = st.slider(
-            "LIME Sample Index", 0, len(X_test) - 1, 0, key="lime_idx"
-        )
+        lime_idx = st.slider("LIME Sample Index", 0, len(X_test) - 1, 0, key="lime_idx")
         lime_result = lime_explain(model, X_train, X_test, idx=lime_idx)
         if lime_result:
             import pandas as pd
@@ -911,7 +991,10 @@ def page_explain_prediction() -> None:
                 f"This is a model explanation, not a causal claim."
             )
         else:
-            system_alert("LIME explanation returned no contributions for this sample.", level="warning")
+            system_alert(
+                "LIME explanation returned no contributions for this sample.",
+                level="warning",
+            )
 
     with tab_technical:
         section_header("Technical Details")
@@ -933,7 +1016,10 @@ def page_explain_prediction() -> None:
 
 def page_download_reports() -> None:
     """Render the reports and downloads center."""
-    page_header("Reports & Downloads", "Download evaluation reports, model artifacts, and data exports")
+    page_header(
+        "Reports & Downloads",
+        "Download evaluation reports, model artifacts, and data exports",
+    )
 
     section_title("Report Center")
 
@@ -1048,9 +1134,7 @@ def page_download_reports() -> None:
             versions = registry.get("versions", {})
             latest_key = _latest_version_key(versions)
             latest_metrics = (
-                versions[latest_key].get("metrics", {})
-                if latest_key
-                else {}
+                versions[latest_key].get("metrics", {}) if latest_key else {}
             )
 
             sections = [
@@ -1086,7 +1170,9 @@ def page_download_reports() -> None:
 
 def page_model_information() -> None:
     """Render the model information page."""
-    page_header("Model Information", "Technical details about the predictive maintenance system")
+    page_header(
+        "Model Information", "Technical details about the predictive maintenance system"
+    )
 
     registry = load_registry_resource()
     versions = registry.get("versions", {})
@@ -1115,7 +1201,8 @@ def page_model_information() -> None:
             <div class="model-status-cell">
                 <span class="model-status-label">Status</span>
                 <span class="model-status-value" style="color:{status_color};">
-                    <span class="model-status-dot" style="background-color:{status_color};"></span>
+                    <span class="model-status-dot"
+                        style="background-color:{status_color};"></span>
                     {status_label}
                 </span>
             </div>
@@ -1130,8 +1217,12 @@ def page_model_information() -> None:
     features = feature_config.get("features", [])
     if not features:
         features = [
-            "Air temperature", "Process temperature", "Rotational speed",
-            "Torque", "Tool wear", "Machine type",
+            "Air temperature",
+            "Process temperature",
+            "Rotational speed",
+            "Torque",
+            "Tool wear",
+            "Machine type",
         ]
 
     col1, col2 = st.columns(2, gap="large")
@@ -1169,7 +1260,10 @@ def page_model_information() -> None:
 
 def page_threshold_optimization() -> None:
     """Render the threshold optimization page."""
-    page_header("Threshold Optimization", "Understand the trade-off between sensitivity and specificity")
+    page_header(
+        "Threshold Optimization",
+        "Understand the trade-off between sensitivity and specificity",
+    )
 
     if not artifacts_exist():
         _artifact_warning()
@@ -1199,7 +1293,8 @@ def page_threshold_optimization() -> None:
     section_title("Decision Threshold")
     threshold = st.slider(
         "Threshold",
-        0.05, 0.95,
+        0.05,
+        0.95,
         float(recommended_threshold),
         0.01,
     )
@@ -1224,7 +1319,13 @@ def page_threshold_optimization() -> None:
             ("Precision", f"{precision:.4f}", DESIGN["success"]),
             ("Recall", f"{recall:.4f}", DESIGN["warning"]),
             ("F1 Score", f"{f1:.4f}", DESIGN["accent"]),
-            ("ROC-AUC", f"{load_xgboost_metrics().get('roc_auc', 0):.4f}" if load_xgboost_metrics() else "N/A", DESIGN["error"]),
+            (
+                "ROC-AUC",
+                f"{load_xgboost_metrics().get('roc_auc', 0):.4f}"
+                if load_xgboost_metrics()
+                else "N/A",
+                DESIGN["error"],
+            ),
         ]
     )
 
@@ -1242,7 +1343,8 @@ def page_threshold_optimization() -> None:
         render_html(
             """
             <div class="prediction-panel" style="border-left:3px solid #ffab00;">
-                <div class="prediction-label" style="color:#ffab00;margin-bottom:0.5rem;">Lower Threshold</div>
+                <div class="prediction-label"
+                    style="color:#ffab00;margin-bottom:0.5rem;">Lower Threshold</div>
                 <div style="font-size:0.8rem;color:#8b949e;line-height:1.6;">
                     More sensitive<br>
                     More false positives<br>
@@ -1255,7 +1357,8 @@ def page_threshold_optimization() -> None:
         render_html(
             """
             <div class="prediction-panel" style="border-left:3px solid #00d4ff;">
-                <div class="prediction-label" style="color:#00d4ff;margin-bottom:0.5rem;">Higher Threshold</div>
+                <div class="prediction-label"
+                    style="color:#00d4ff;margin-bottom:0.5rem;">Higher Threshold</div>
                 <div style="font-size:0.8rem;color:#8b949e;line-height:1.6;">
                     Less sensitive<br>
                     Fewer false positives<br>
@@ -1268,7 +1371,9 @@ def page_threshold_optimization() -> None:
 
 def page_performance_metrics() -> None:
     """Render the model performance evaluation page."""
-    page_header("Model Performance", "Comprehensive evaluation metrics and visualizations")
+    page_header(
+        "Model Performance", "Comprehensive evaluation metrics and visualizations"
+    )
 
     if not artifacts_exist():
         _artifact_warning()
@@ -1318,7 +1423,10 @@ def page_performance_metrics() -> None:
         )
         st.dataframe(styled, use_container_width=True, hide_index=True)
     else:
-        system_alert("Model comparison CSV not found. Run evaluation to generate it.", level="warning")
+        system_alert(
+            "Model comparison CSV not found. Run evaluation to generate it.",
+            level="warning",
+        )
 
     section_title("Confusion Matrices")
     cm_cols = st.columns(2)

@@ -37,10 +37,13 @@ class TestValidation:
 
     def test_validate_target_leakage_negative(self):
         df = load_dataset()
-        validate_target_leakage(df, feature_columns=[
-            "Air temperature [K]",
-            "Process temperature [K]",
-        ])
+        validate_target_leakage(
+            df,
+            feature_columns=[
+                "Air temperature [K]",
+                "Process temperature [K]",
+            ],
+        )
 
     def test_validate_dataset_full(self):
         df = load_dataset()

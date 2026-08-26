@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from typing import Sequence, TypedDict
 
 import streamlit as st
 
@@ -14,7 +14,14 @@ from src.ui_styles import DESIGN
 # Each item is (sidebar_label, page_id, button_key). ``page_id`` is the value
 # stored in ``st.session_state.page`` and used to dispatch to the page render
 # function. ``button_key`` is the unique Streamlit key for the nav button.
-NAV_GROUPS: list[dict[str, list[tuple[str, str, str]]]] = [
+
+
+class NavGroup(TypedDict):
+    label: str
+    items: list[tuple[str, str, str]]
+
+
+NAV_GROUPS: list[NavGroup] = [
     {"label": "Overview", "items": [("Dashboard", "Home", "nav_dashboard")]},
     {
         "label": "Intelligence",
@@ -137,7 +144,12 @@ def section_title(title: str) -> None:
 # Metrics
 # ---------------------------------------------------------------------------
 def metric_mega(value: str, unit: str = "") -> None:
-    unit_html = f'<span style="font-size:0.4em;font-weight:600;color:#8b949e;margin-left:0.25rem;">{unit}</span>' if unit else ""
+    unit_html = (
+        f'<span style="font-size:0.4em;font-weight:600;color:#8b949e;'
+        f'margin-left:0.25rem;">{unit}</span>'
+        if unit
+        else ""
+    )
     render_html(f'<div class="metric-mega">{value}{unit_html}</div>')
     return None
 
@@ -178,11 +190,17 @@ def status_indicator(status: str = "ready", label: str = "") -> None:
         "error": DESIGN["error"],
     }.get(status, DESIGN["text_muted"])
 
-    label_html = f'<span style="margin-left:0.4rem;font-size:0.75rem;font-weight:600;color:#e6edf3;">{label}</span>' if label else ""
+    label_html = (
+        f'<span style="margin-left:0.4rem;font-size:0.75rem;font-weight:600;'
+        f'color:#e6edf3;">{label}</span>'
+        if label
+        else ""
+    )
     render_html(
         f"""
         <span style="display:inline-flex;align-items:center;gap:0.4rem;">
-            <span style="width:6px;height:6px;border-radius:50%;background-color:{color};"></span>
+            <span style="width:6px;height:6px;border-radius:50%;
+                background-color:{color};"></span>
             {label_html}
         </span>
         """,
@@ -265,10 +283,13 @@ def prediction_panel(result: dict, threshold: float) -> None:
     pct = f"{prob * 100:.1f}%"
 
     decision = (
-        f"Model indicates elevated failure risk ({pct}) above the decision threshold ({threshold:.2f}). "
-        "Schedule inspection or preventive maintenance. This is a model indication, not a guarantee of failure."
+        f"Model indicates elevated failure risk ({pct}) above the decision "
+        f"threshold ({threshold:.2f}). "
+        "Schedule inspection or preventive maintenance. This is a model "
+        "indication, not a guarantee of failure."
         if pred == 1
-        else f"Model indicates normal operation ({pct}) below the decision threshold ({threshold:.2f}). "
+        else f"Model indicates normal operation ({pct}) below the decision "
+        f"threshold ({threshold:.2f}). "
         "Continue monitoring according to the normal maintenance schedule."
     )
 
@@ -306,7 +327,8 @@ def feature_contribution_bars(
             <div class="feature-row">
                 <div class="feature-name">{display_name}</div>
                 <div class="feature-bar-track">
-                    <div class="feature-bar-fill {direction}" style="width:{width}%;background-color:{color};"></div>
+                    <div class="feature-bar-fill {direction}"
+                        style="width:{width}%;background-color:{color};"></div>
                 </div>
                 <div class="feature-value {direction}">{sign}{val:.4f}</div>
             </div>
@@ -453,8 +475,10 @@ def render_metric_card(title: str, value: str, color: str | None = None) -> None
     render_html(
         f"""
         <div style="padding:1rem 0;border-bottom:1px solid #21262d;">
-            <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#484f58;margin-bottom:0.35rem;">{title}</div>
-            <div style="font-size:1.5rem;font-weight:800;color:{c};letter-spacing:-0.02em;">{value}</div>
+            <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;
+                text-transform:uppercase;color:#484f58;margin-bottom:0.35rem;">{title}</div>
+            <div style="font-size:1.5rem;font-weight:800;color:{c};
+                letter-spacing:-0.02em;">{value}</div>
         </div>
         """,
     )
@@ -466,7 +490,7 @@ def render_metric_row(
     columns: int = 4,
 ) -> None:
     for i in range(0, len(metrics), columns):
-        chunk = metrics[i : i + columns]
+        chunk = metrics[i:i + columns]
         cols = st.columns(len(chunk))
         for col, (title, value, color) in zip(cols, chunk):
             with col:
@@ -478,14 +502,19 @@ def render_status_dot(status: str = "ready") -> str:
     color = {"ready": DESIGN["success"], "warn": DESIGN["warning"], "error": DESIGN["error"]}.get(
         status, DESIGN["text_muted"]
     )
-    return f'<span style="width:6px;height:6px;border-radius:50%;background-color:{color};display:inline-block;"></span>'
+    return (
+        f'<span style="width:6px;height:6px;border-radius:50%;'
+        f'background-color:{color};display:inline-block;"></span>'
+    )
 
 
 def card_html(title: str, value: str, color: str) -> str:
     return (
         f'<div style="padding:1rem 0;border-bottom:1px solid #21262d;">'
-        f'<div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#484f58;margin-bottom:0.35rem;">{title}</div>'
-        f'<div style="font-size:1.5rem;font-weight:800;color:{color};letter-spacing:-0.02em;">{value}</div></div>'
+        f'<div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;'
+        f'text-transform:uppercase;color:#484f58;margin-bottom:0.35rem;">{title}</div>'
+        f'<div style="font-size:1.5rem;font-weight:800;color:{color};'
+        f'letter-spacing:-0.02em;">{value}</div></div>'
     )
 
 
@@ -493,7 +522,8 @@ def render_info_card(title: str, content: str) -> None:
     render_html(
         f"""
         <div style="padding:0.75rem 0;border-bottom:1px solid #161c24;">
-            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#00d4ff;margin-bottom:0.35rem;">{title}</div>
+            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;
+                text-transform:uppercase;color:#00d4ff;margin-bottom:0.35rem;">{title}</div>
             <div style="font-size:0.8rem;color:#8b949e;line-height:1.5;">{content}</div>
         </div>
         """,
@@ -505,7 +535,8 @@ def render_action_card(title: str, content: str) -> None:
     render_html(
         f"""
         <div style="padding:0.75rem 0;border-bottom:1px solid #161c24;">
-            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#00d4ff;margin-bottom:0.35rem;">{title}</div>
+            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;
+                text-transform:uppercase;color:#00d4ff;margin-bottom:0.35rem;">{title}</div>
             <div style="font-size:0.8rem;color:#8b949e;line-height:1.5;">{content}</div>
         </div>
         """,
@@ -516,7 +547,8 @@ def render_action_card(title: str, content: str) -> None:
 def render_highlight(text: str) -> None:
     render_html(
         f"<div style='display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;"
-        f"font-size:0.85rem;color:#e6edf3;'><span style='color:#00c853;font-weight:700;'>✓</span>{text}</div>",
+        f"font-size:0.85rem;color:#e6edf3;'><span style='color:#00c853;"
+        f"font-weight:700;'>✓</span>{text}</div>",
     )
     return None
 

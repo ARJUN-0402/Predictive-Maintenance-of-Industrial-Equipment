@@ -253,7 +253,9 @@ class TestComponentReturnValues:
 
     def test_prediction_panel_returns_none(self) -> None:
         with patch("src.ui_components.st", MagicMock()):
-            result = prediction_panel({"prediction": 1, "probability": 0.75, "risk_level": "High"}, 0.5)
+            result = prediction_panel(
+                {"prediction": 1, "probability": 0.75, "risk_level": "High"}, 0.5
+            )
         assert result is None
 
     def test_feature_contribution_bars_returns_none(self) -> None:
@@ -405,8 +407,11 @@ class TestRawHtmlNotRenderedAsPlainText:
             if stripped.startswith("#"):
                 continue
             if "st.write(" in stripped:
-                assert "Loading and preprocessing" in stripped, (
-                    f"st.write on line {i} appears to render non-text content: {stripped}"
+                assert (
+                    "Loading and preprocessing" in stripped
+                ), (
+                    f"st.write on line {i} appears to render non-text content: "
+                    f"{stripped}"
                 )
 
 

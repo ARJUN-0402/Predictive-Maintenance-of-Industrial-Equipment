@@ -4,9 +4,7 @@ import pandas as pd
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     """Engineer features for predictive maintenance dataset."""
     df = df.copy()
-    df["temperature_diff"] = (
-        df["Process temperature [K]"] - df["Air temperature [K]"]
-    )
+    df["temperature_diff"] = df["Process temperature [K]"] - df["Air temperature [K]"]
     df["power"] = (
         df["Torque [Nm]"] * df["Rotational speed [rpm]"] * (2 * 3.141592653589793 / 60)
     )

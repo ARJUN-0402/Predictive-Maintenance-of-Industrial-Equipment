@@ -30,21 +30,11 @@ def compute_all_metrics(
     y_prob: np.ndarray,
 ) -> dict:
     return {
-        "accuracy": round(
-            accuracy_score(y_true, y_pred), 4
-        ),
-        "precision": round(
-            precision_score(y_true, y_pred, zero_division=0), 4
-        ),
-        "recall": round(
-            recall_score(y_true, y_pred, zero_division=0), 4
-        ),
-        "f1": round(
-            f1_score(y_true, y_pred, zero_division=0), 4
-        ),
-        "roc_auc": round(
-            roc_auc_score(y_true, y_prob), 4
-        ),
+        "accuracy": round(accuracy_score(y_true, y_pred), 4),
+        "precision": round(precision_score(y_true, y_pred, zero_division=0), 4),
+        "recall": round(recall_score(y_true, y_pred, zero_division=0), 4),
+        "f1": round(f1_score(y_true, y_pred, zero_division=0), 4),
+        "roc_auc": round(roc_auc_score(y_true, y_prob), 4),
     }
 
 
@@ -72,8 +62,11 @@ def save_confusion_matrix(
     for i in range(cm.shape[0]):
         for j in range(cm.shape[1]):
             ax.text(
-                j, i, format(cm[i, j], "d"),
-                ha="center", va="center",
+                j,
+                i,
+                format(cm[i, j], "d"),
+                ha="center",
+                va="center",
                 color="white" if cm[i, j] > cm.max() / 2 else "black",
             )
     fig.tight_layout()
@@ -96,12 +89,16 @@ def save_roc_curve(
         auc = roc_auc_score(y_true, probs)
         fig.add_trace(
             go.Scatter(
-                x=fpr, y=tpr, mode="lines",
+                x=fpr,
+                y=tpr,
+                mode="lines",
                 name=f"{name} (AUC={auc:.4f})",
             )
         )
     fig.add_trace(
-        go.Scatter(x=[0, 1], y=[0, 1], mode="lines", name="Random", line=dict(dash="dash"))
+        go.Scatter(
+            x=[0, 1], y=[0, 1], mode="lines", name="Random", line=dict(dash="dash")
+        )
     )
     fig.update_layout(
         title="ROC Curve — All Models",
@@ -126,7 +123,9 @@ def save_pr_curve(
         precision_vals, recall_vals, _ = precision_recall_curve(y_true, probs)
         fig.add_trace(
             go.Scatter(
-                x=recall_vals, y=precision_vals, mode="lines",
+                x=recall_vals,
+                y=precision_vals,
+                mode="lines",
                 name=name,
             )
         )
@@ -248,9 +247,12 @@ def main() -> int:
 
         print("\n=== Model Comparison (sorted by ROC-AUC) ===\n")
         with pd.option_context(
-            "display.max_columns", None,
-            "display.width", 200,
-            "display.float_format", "{:.4f}".format,
+            "display.max_columns",
+            None,
+            "display.width",
+            200,
+            "display.float_format",
+            "{:.4f}".format,
         ):
             print(comparison_df.to_string())
         print()

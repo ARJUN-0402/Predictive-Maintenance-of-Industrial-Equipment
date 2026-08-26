@@ -84,12 +84,8 @@ def preprocess_data(
         X_processed = X_transformed.copy()
         X_processed.columns = feature_names
     else:
-        feature_names = clean_feature_names(
-            list(preprocessor.get_feature_names_out())
-        )
-        X_processed = pd.DataFrame(
-            X_transformed, columns=feature_names, index=X.index
-        )
+        feature_names = clean_feature_names(list(preprocessor.get_feature_names_out()))
+        X_processed = pd.DataFrame(X_transformed, columns=feature_names, index=X.index)
 
     logger.info("Preprocessing complete: shape %s", X_processed.shape)
     return X_processed, target, preprocessor

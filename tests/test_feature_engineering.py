@@ -31,9 +31,9 @@ def test_power_formula_known_inputs() -> None:
     )
     result = engineer_features(df)
     expected_power = 50.0 * 1000.0 * (2 * math.pi / 60)
-    assert abs(result["power"].iloc[0] - expected_power) < 0.01, (
-        f"Expected power={expected_power}, got {result['power'].iloc[0]}"
-    )
+    assert (
+        abs(result["power"].iloc[0] - expected_power) < 0.01
+    ), f"Expected power={expected_power}, got {result['power'].iloc[0]}"
 
 
 def test_temperature_diff_known_inputs() -> None:

@@ -29,7 +29,9 @@ def validate_schema(df: pd.DataFrame) -> None:
     extra = set(df.columns) - set(EXPECTED_COLUMNS)
     if extra:
         raise ValidationError(f"Unexpected columns: {sorted(extra)}")
-    logger.info("Schema validation passed: all expected columns present, no unexpected columns")
+    logger.info(
+        "Schema validation passed: all expected columns present, no unexpected columns"
+    )
 
 
 def validate_data_types(df: pd.DataFrame) -> None:
@@ -103,11 +105,13 @@ def validate_missing_values(df: pd.DataFrame, threshold: float = 0.1) -> pd.Data
     """
     missing_count = df.isnull().sum()
     missing_frac = missing_count / len(df)
-    missing_summary = pd.DataFrame({
-        "column": missing_count.index[missing_count > 0],
-        "missing_count": missing_count[missing_count > 0],
-        "missing_fraction": missing_frac[missing_frac > 0],
-    })
+    missing_summary = pd.DataFrame(
+        {
+            "column": missing_count.index[missing_count > 0],
+            "missing_count": missing_count[missing_count > 0],
+            "missing_fraction": missing_frac[missing_frac > 0],
+        }
+    )
 
     if len(missing_summary) > 0:
         flagged = missing_summary[missing_summary["missing_fraction"] > threshold]
@@ -138,7 +142,8 @@ def validate_duplicate_rows(df: pd.DataFrame) -> bool:
     if removed > 0:
         logger.warning(
             "Found %d duplicate rows, removed %d rows from dataset",
-            original_len - deduped_len, removed
+            original_len - deduped_len,
+            removed,
         )
         return True
     else:
@@ -146,7 +151,9 @@ def validate_duplicate_rows(df: pd.DataFrame) -> bool:
         return False
 
 
-def validate_categorical_values(df: pd.DataFrame, column: str, valid_values: set) -> None:
+def validate_categorical_values(
+    df: pd.DataFrame, column: str, valid_values: set
+) -> None:
     """Validate that a categorical column only contains expected values.
 
     Args:
@@ -191,7 +198,9 @@ def validate_numeric_ranges(df: pd.DataFrame, ranges: dict) -> None:
     logger.info("Numeric range validation passed for %d columns", len(ranges))
 
 
-def validate_target_leakage(df: pd.DataFrame, feature_columns: list[str] | None = None) -> None:
+def validate_target_leakage(
+    df: pd.DataFrame, feature_columns: list[str] | None = None
+) -> None:
     """Validate that post-failure label columns are not used as features.
 
     The following columns MUST NOT be used as predictive features as they
@@ -247,7 +256,9 @@ def validate_feature_columns(df: pd.DataFrame, feature_columns: list[str]) -> No
     logger.info("Feature column validation passed: %d features", len(feature_columns))
 
 
-def validate_dataset(df: pd.DataFrame, check_feature_columns: bool = False, skip_schema: bool = False) -> None:  # noqa: E501
+def validate_dataset(
+    df: pd.DataFrame, check_feature_columns: bool = False, skip_schema: bool = False
+) -> None:  # noqa: E501
     """Run all validation checks on a dataset.
 
     Args:
@@ -263,7 +274,9 @@ def validate_dataset(df: pd.DataFrame, check_feature_columns: bool = False, skip
         validate_schema(df)
     validate_data_types(df)
     validate_duplicate_rows(df)
-    validate_target_leakage(df, feature_columns=FEATURE_COLUMNS if check_feature_columns else None)
+    validate_target_leakage(
+        df, feature_columns=FEATURE_COLUMNS if check_feature_columns else None
+    )
 
     if check_feature_columns:
         validate_feature_columns(df, FEATURE_COLUMNS)

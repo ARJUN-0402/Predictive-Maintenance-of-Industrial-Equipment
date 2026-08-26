@@ -28,9 +28,7 @@ def optimize_threshold(
     Returns the threshold that maximizes F1, plus additional information
     for decision-making.
     """
-    thresholds = np.arange(
-        threshold_range[0], threshold_range[1] + step, step
-    )
+    thresholds = np.arange(threshold_range[0], threshold_range[1] + step, step)
 
     precision_vals = []
     recall_vals = []
@@ -56,14 +54,16 @@ def optimize_threshold(
         fn_vals.append(fn)
         tp_vals.append(tp)
 
-    results_df = pd.DataFrame({
-        "threshold": thresholds,
-        "precision": precision_vals,
-        "recall": recall_vals,
-        "f1": f1_vals,
-        "false_positives": fp_vals,
-        "false_negatives": fn_vals,
-    })
+    results_df = pd.DataFrame(
+        {
+            "threshold": thresholds,
+            "precision": precision_vals,
+            "recall": recall_vals,
+            "f1": f1_vals,
+            "false_positives": fp_vals,
+            "false_negatives": fn_vals,
+        }
+    )
 
     best_idx = f1_vals.index(max(f1_vals))
     best_threshold = float(thresholds[best_idx])
@@ -76,21 +76,30 @@ def optimize_threshold(
     logger.info(
         "Threshold optimization complete: best_threshold=%.4f, f1=%.4f, "
         "precision=%.4f, recall=%.4f, fp=%d, fn=%d",
-        best_threshold, best_f1, best_precision, best_recall, best_fp, best_fn,
+        best_threshold,
+        best_f1,
+        best_precision,
+        best_recall,
+        best_fp,
+        best_fn,
     )
 
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
-            x=recall_vals, y=precision_vals,
-            mode="lines", name="Precision-Recall Curve",
+            x=recall_vals,
+            y=precision_vals,
+            mode="lines",
+            name="Precision-Recall Curve",
             line=dict(color="#00d4ff", width=2),
         )
     )
     fig.add_trace(
         go.Scatter(
-            x=[best_recall], y=[best_precision],
-            mode="markers", name=f"Best Threshold ({best_threshold:.2f})",
+            x=[best_recall],
+            y=[best_precision],
+            mode="markers",
+            name=f"Best Threshold ({best_threshold:.2f})",
             marker=dict(color="red", size=10),
         )
     )
@@ -101,42 +110,55 @@ def optimize_threshold(
         template="plotly_dark",
     )
     fig.write_html(str(FIGURES_DIR / "precision_recall_curve.html"))
-    logger.info("Saved precision-recall curve to %s", FIGURES_DIR / "precision_recall_curve.html")
+    logger.info(
+        "Saved precision-recall curve to %s",
+        FIGURES_DIR / "precision_recall_curve.html",
+    )
 
     fig2 = go.Figure()
     fnpr = [100 * fn / (fn + tp + 1e-10) for fn, tp in zip(fn_vals, tp_vals)]
     fig2.add_trace(
         go.Scatter(
-            x=thresholds, y=f1_vals,
-            mode="lines", name="F1 Score",
+            x=thresholds,
+            y=f1_vals,
+            mode="lines",
+            name="F1 Score",
             line=dict(color="#00d4ff", width=2),
         )
     )
     fig2.add_trace(
         go.Scatter(
-            x=thresholds, y=precision_vals,
-            mode="lines", name="Precision",
+            x=thresholds,
+            y=precision_vals,
+            mode="lines",
+            name="Precision",
             line=dict(color="#00c853", width=2),
         )
     )
     fig2.add_trace(
         go.Scatter(
-            x=thresholds, y=recall_vals,
-            mode="lines", name="Recall",
+            x=thresholds,
+            y=recall_vals,
+            mode="lines",
+            name="Recall",
             line=dict(color="#ffab00", width=2),
         )
     )
     fig2.add_trace(
         go.Scatter(
-            x=thresholds, y=fnpr,
-            mode="lines", name="False Negative %",
+            x=thresholds,
+            y=fnpr,
+            mode="lines",
+            name="False Negative %",
             line=dict(color="red", width=2, dash="dash"),
         )
     )
     fig2.add_trace(
         go.Scatter(
-            x=[best_threshold], y=[best_f1],
-            mode="markers", name=f"Best Threshold ({best_threshold:.2f})",
+            x=[best_threshold],
+            y=[best_f1],
+            mode="markers",
+            name=f"Best Threshold ({best_threshold:.2f})",
             marker=dict(color="white", size=10, symbol="star"),
         )
     )
@@ -148,7 +170,9 @@ def optimize_threshold(
         legend=dict(x=0.02, y=0.98),
     )
     fig2.write_html(str(FIGURES_DIR / "threshold_analysis.html"))
-    logger.info("Saved threshold analysis to %s", FIGURES_DIR / "threshold_analysis.html")
+    logger.info(
+        "Saved threshold analysis to %s", FIGURES_DIR / "threshold_analysis.html"
+    )
 
     return {
         "best_threshold": best_threshold,
@@ -174,9 +198,7 @@ def recommend_threshold_for_recall(
     costly, so we often prioritize high recall even at the expense of
     precision.
     """
-    thresholds = np.arange(
-        threshold_range[0], threshold_range[1] + step, step
-    )
+    thresholds = np.arange(threshold_range[0], threshold_range[1] + step, step)
 
     best_threshold = None
     best_precision = 0
@@ -214,7 +236,10 @@ def recommend_threshold_for_recall(
     logger.info(
         "Recall-based threshold recommendation: threshold=%.4f, recall=%.4f, "
         "precision=%.4f, f1=%.4f",
-        best_threshold, best_recall, best_precision, best_f1,
+        best_threshold,
+        best_recall,
+        best_precision,
+        best_f1,
     )
 
     return {
@@ -297,9 +322,7 @@ def main() -> int:
         print()
 
         logger.info("=== Recall-oriented threshold (min recall >= 0.80) ===")
-        rec_result = recommend_threshold_for_recall(
-            y_test, y_prob, minimum_recall=0.80
-        )
+        rec_result = recommend_threshold_for_recall(y_test, y_prob, minimum_recall=0.80)
 
         print("=== Recall-Oriented Threshold (min recall >= 0.80) ===\n")
         print(f"  Recommended threshold: {rec_result['threshold']:.4f}")

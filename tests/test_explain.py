@@ -1,6 +1,3 @@
-import matplotlib
-matplotlib.use("Agg")
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -18,7 +15,9 @@ from src.explain import (
 )
 
 
-def _make_model_and_data(n_features: int = 5, n_samples: int = 20, random_state: int = 42):
+def _make_model_and_data(
+    n_features: int = 5, n_samples: int = 20, random_state: int = 42
+):
     rng = np.random.default_rng(random_state)
     X = pd.DataFrame(
         rng.standard_normal((n_samples, n_features)),
@@ -38,6 +37,7 @@ def _make_model_and_data(n_features: int = 5, n_samples: int = 20, random_state:
 @pytest.fixture(autouse=True)
 def _reset_matplotlib():
     import matplotlib.pyplot as plt
+
     yield
     plt.close("all")
 
@@ -104,7 +104,9 @@ class TestShapDependencePlots:
 
         top_features = list(X.columns)[:3]
         output_dir = tmp_path / "dependence"
-        result = shap_dependence_plots(explainer, X, top_features, output_dir=output_dir)
+        result = shap_dependence_plots(
+            explainer, X, top_features, output_dir=output_dir
+        )
 
         assert len(result) == len(top_features)
         for path in result:
@@ -117,7 +119,9 @@ class TestShapDependencePlots:
 
         top_features = ["missing_feature"] + list(X.columns)[:2]
         output_dir = tmp_path / "dependence"
-        result = shap_dependence_plots(explainer, X, top_features, output_dir=output_dir)
+        result = shap_dependence_plots(
+            explainer, X, top_features, output_dir=output_dir
+        )
 
         assert len(result) == 2
         for path in result:

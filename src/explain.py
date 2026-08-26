@@ -26,9 +26,7 @@ def _save_plot_figure(
     elif plot_object is None:
         figure = plt.gcf()
     else:
-        raise TypeError(
-            f"Unsupported plot object type: {type(plot_object)}"
-        )
+        raise TypeError(f"Unsupported plot object type: {type(plot_object)}")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(str(output_path), bbox_inches=bbox_inches, dpi=dpi)
@@ -39,9 +37,13 @@ def _save_plot_figure(
 def get_shap_explainer(model, X: pd.DataFrame | None = None) -> shap.TreeExplainer:
     try:
         if X is not None:
-            explainer = shap.TreeExplainer(model, X, feature_perturbation="tree_path_dependent")
+            explainer = shap.TreeExplainer(
+                model, X, feature_perturbation="tree_path_dependent"
+            )
         else:
-            explainer = shap.TreeExplainer(model, feature_perturbation="tree_path_dependent")
+            explainer = shap.TreeExplainer(
+                model, feature_perturbation="tree_path_dependent"
+            )
         booster = model.get_booster()
         if booster.feature_names is not None:
             explainer.feature_names = list(booster.feature_names)
@@ -161,9 +163,7 @@ def shap_dependence_plots(
                 continue
             out_path = output_dir / f"shap_dependence_{feat}.png"
             _save_plot_figure(
-                shap.dependence_plot(
-                    feat, shap_values, X, show=False
-                ),
+                shap.dependence_plot(feat, shap_values, X, show=False),
                 out_path,
             )
             paths.append(out_path)
@@ -256,7 +256,9 @@ def explain_prediction_plain_english(
             # Compute mean absolute SHAP values using a subsample if needed
             # Use tree_path_dependent perturbation to handle categorical features
             X_use = X if len(X) <= 100 else X.sample(n=100, random_state=42)
-            shap_mean = np.abs(explainer.shap_values(X_use, check_additivity=False)).mean(axis=0)
+            shap_mean = np.abs(
+                explainer.shap_values(X_use, check_additivity=False)
+            ).mean(axis=0)
             if isinstance(shap_mean, pd.Series):
                 feat_imp = shap_mean
             else:
@@ -271,10 +273,11 @@ def explain_prediction_plain_english(
             top_names = list(top_features)
 
         pos_parts = [
-            f"{name} has strong influence on failure prediction"
-            for name in top_names
+            f"{name} has strong influence on failure prediction" for name in top_names
         ]
-        explanation = "Based on overall feature influence, " + ". ".join(pos_parts) + "."
+        explanation = (
+            "Based on overall feature influence, " + ". ".join(pos_parts) + "."
+        )
         return explanation
 
     sample_shap = shap_values[idx]
@@ -317,7 +320,9 @@ def explain_prediction_plain_english(
     if not parts:
         return "Unable to generate explanation."
 
-    explanation = "The predicted failure probability is influenced by: " + ". ".join(parts) + "."
+    explanation = (
+        "The predicted failure probability is influenced by: " + ". ".join(parts) + "."
+    )
 
     return explanation
 

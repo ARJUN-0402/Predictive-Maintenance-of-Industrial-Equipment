@@ -5,6 +5,7 @@ These tests mock train_all_models() so they run quickly and do not depend
 on network access or produce large artifacts. They verify that the CLI
 main() functions execute and return the expected exit codes.
 """
+
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -33,9 +34,7 @@ def mock_train_result(tmp_path: Path) -> dict:
     n_features = 13
     feature_names = [f"f{i}" for i in range(n_features)]
 
-    X_test = pd.DataFrame(
-        rng.standard_normal((n, n_features)), columns=feature_names
-    )
+    X_test = pd.DataFrame(rng.standard_normal((n, n_features)), columns=feature_names)
     y_test = pd.Series(rng.integers(0, 2, size=n), name="Machine failure")
 
     y_prob = rng.uniform(0.0, 1.0, size=n)
@@ -43,7 +42,12 @@ def mock_train_result(tmp_path: Path) -> dict:
 
     models = {
         name: _make_mock_model(y_pred, y_prob)
-        for name in ("xgboost", "random_forest", "gradient_boosting", "logistic_regression")
+        for name in (
+            "xgboost",
+            "random_forest",
+            "gradient_boosting",
+            "logistic_regression",
+        )
     }
 
     metrics = {

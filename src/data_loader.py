@@ -44,9 +44,7 @@ def download_dataset(url: str, dest_dir: Path) -> Path:
         if extracted_files:
             extracted_files[0].rename(csv_path)
         else:
-            raise FileNotFoundError(
-                f"No CSV file found after extraction in {dest_dir}"
-            )
+            raise FileNotFoundError(f"No CSV file found after extraction in {dest_dir}")
     return csv_path
 
 

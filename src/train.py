@@ -59,14 +59,14 @@ def train_xgboost(X_train: pd.DataFrame, y_train: pd.Series) -> tuple:
         verbose=1,
     )
     grid_search.fit(X_train, y_train)
-    logger.info(
-        "XGBoost best params: %s", grid_search.best_params_
-    )
+    logger.info("XGBoost best params: %s", grid_search.best_params_)
     logger.info("XGBoost best CV ROC-AUC: %.4f", grid_search.best_score_)
     return grid_search.best_estimator_, grid_search.best_params_
 
 
-def train_random_forest(X_train: pd.DataFrame, y_train: pd.Series) -> RandomForestClassifier:
+def train_random_forest(
+    X_train: pd.DataFrame, y_train: pd.Series
+) -> RandomForestClassifier:
     logger.info("Training Random Forest...")
     model = RandomForestClassifier(
         n_estimators=200,
@@ -78,7 +78,9 @@ def train_random_forest(X_train: pd.DataFrame, y_train: pd.Series) -> RandomFore
     return model
 
 
-def train_gradient_boosting(X_train: pd.DataFrame, y_train: pd.Series) -> GradientBoostingClassifier:  # noqa: E501
+def train_gradient_boosting(
+    X_train: pd.DataFrame, y_train: pd.Series
+) -> GradientBoostingClassifier:  # noqa: E501
     logger.info("Training Gradient Boosting...")
     model = GradientBoostingClassifier(
         n_estimators=200,
@@ -88,7 +90,9 @@ def train_gradient_boosting(X_train: pd.DataFrame, y_train: pd.Series) -> Gradie
     return model
 
 
-def train_logistic_regression(X_train: pd.DataFrame, y_train: pd.Series) -> LogisticRegression:  # noqa: E501
+def train_logistic_regression(
+    X_train: pd.DataFrame, y_train: pd.Series
+) -> LogisticRegression:  # noqa: E501
     logger.info("Training Logistic Regression...")
     model = LogisticRegression(
         class_weight="balanced",
@@ -99,9 +103,7 @@ def train_logistic_regression(X_train: pd.DataFrame, y_train: pd.Series) -> Logi
     return model
 
 
-def compute_metrics(
-    y_true: pd.Series, y_pred: np.ndarray, y_prob: np.ndarray
-) -> dict:
+def compute_metrics(y_true: pd.Series, y_pred: np.ndarray, y_prob: np.ndarray) -> dict:
     return {
         "accuracy": accuracy_score(y_true, y_pred),
         "precision": precision_score(y_true, y_pred, zero_division=0),
@@ -149,7 +151,11 @@ def save_model_registry(
     if threshold is not None:
         entry["threshold"] = threshold
 
-    if "shared" not in registry and dataset_info is not None and feature_config is not None:
+    if (
+        "shared" not in registry
+        and dataset_info is not None
+        and feature_config is not None
+    ):
         registry["shared"] = {
             "dataset_info": dataset_info,
             "feature_config": feature_config,
@@ -174,7 +180,11 @@ def train_all_models() -> dict:
     df = engineer_features(df)
 
     logger.info("Splitting data...")
-    feature_cols = [c for c in df.columns if c not in ("Machine failure", "UDI", "TWF", "HDF", "PWF", "OSF", "RNF")]  # noqa: E501
+    feature_cols = [
+        c
+        for c in df.columns
+        if c not in ("Machine failure", "UDI", "TWF", "HDF", "PWF", "OSF", "RNF")
+    ]  # noqa: E501
     X = df[feature_cols]
     y = df["Machine failure"]
 
@@ -189,14 +199,14 @@ def train_all_models() -> dict:
     test_df = pd.concat([X_test, y_test], axis=1)
 
     logger.info("Preprocessing data...")
-    X_train_proc, y_train_proc, preprocessor = preprocess_data(
-        train_df, fit=True
-    )
+    X_train_proc, y_train_proc, preprocessor = preprocess_data(train_df, fit=True)
     X_test_proc, y_test_proc, _ = preprocess_data(
         test_df, preprocessor=preprocessor, fit=False
     )
 
-    save_processed_data(X_train_proc, y_train_proc, X_test_proc, y_test_proc, preprocessor)
+    save_processed_data(
+        X_train_proc, y_train_proc, X_test_proc, y_test_proc, preprocessor
+    )
 
     dataset_info = {
         "rows": len(df),
@@ -225,7 +235,9 @@ def train_all_models() -> dict:
     models["xgboost"] = xgb_model
     metrics_results["xgboost"] = xgb_metrics
     save_model_registry(
-        "xgboost", xgb_params, xgb_metrics,
+        "xgboost",
+        xgb_params,
+        xgb_metrics,
         dataset_info=dataset_info,
         feature_config=feature_config,
     )
@@ -239,7 +251,9 @@ def train_all_models() -> dict:
     models["random_forest"] = rf_model
     metrics_results["random_forest"] = rf_metrics
     save_model_registry(
-        "random_forest", {"n_estimators": 200, "class_weight": "balanced"}, rf_metrics,
+        "random_forest",
+        {"n_estimators": 200, "class_weight": "balanced"},
+        rf_metrics,
         dataset_info=dataset_info,
         feature_config=feature_config,
     )
@@ -253,7 +267,9 @@ def train_all_models() -> dict:
     models["gradient_boosting"] = gb_model
     metrics_results["gradient_boosting"] = gb_metrics
     save_model_registry(
-        "gradient_boosting", {"n_estimators": 200}, gb_metrics,
+        "gradient_boosting",
+        {"n_estimators": 200},
+        gb_metrics,
         dataset_info=dataset_info,
         feature_config=feature_config,
     )
@@ -267,7 +283,9 @@ def train_all_models() -> dict:
     models["logistic_regression"] = lr_model
     metrics_results["logistic_regression"] = lr_metrics
     save_model_registry(
-        "logistic_regression", {"class_weight": "balanced"}, lr_metrics,
+        "logistic_regression",
+        {"class_weight": "balanced"},
+        lr_metrics,
         dataset_info=dataset_info,
         feature_config=feature_config,
     )

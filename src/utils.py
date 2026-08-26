@@ -76,9 +76,7 @@ def validate_columns(df: pd.DataFrame, expected: list[str]) -> None:
 
 def format_probability(probability: float) -> str:
     if not 0.0 <= probability <= 1.0:
-        raise ValueError(
-            f"Probability must be in [0, 1], got {probability}"
-        )
+        raise ValueError(f"Probability must be in [0, 1], got {probability}")
     return f"{probability:.1%}"
 
 

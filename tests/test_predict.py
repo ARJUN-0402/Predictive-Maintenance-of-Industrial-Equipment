@@ -21,10 +21,7 @@ def test_classify_risk_low() -> None:
 
 
 def test_classify_risk_not_hardcoded_low() -> None:
-    levels = {
-        _classify_risk(p, threshold=0.5)
-        for p in [0.05, 0.4, 0.55, 0.8, 0.99]
-    }
+    levels = {_classify_risk(p, threshold=0.5) for p in [0.05, 0.4, 0.55, 0.8, 0.99]}
     assert levels == {"Low", "Medium", "High"}
 
 
@@ -34,9 +31,7 @@ def test_predict_risk_level_derived_not_hardcoded(normal_sample: dict) -> None:
     except FileNotFoundError:
         pytest.skip("Model file not found; skipping prediction test")
     assert result["risk_level"] in ("Low", "Medium", "High")
-    assert result["risk_level"] == _classify_risk(
-        result["probability"], threshold=0.5
-    )
+    assert result["risk_level"] == _classify_risk(result["probability"], threshold=0.5)
 
 
 def test_predict_risk_level_matches_classifier(failure_sample: dict) -> None:
@@ -44,9 +39,7 @@ def test_predict_risk_level_matches_classifier(failure_sample: dict) -> None:
         result = predict(failure_sample, threshold=0.5)
     except FileNotFoundError:
         pytest.skip("Model file not found; skipping prediction test")
-    assert result["risk_level"] == _classify_risk(
-        result["probability"], threshold=0.5
-    )
+    assert result["risk_level"] == _classify_risk(result["probability"], threshold=0.5)
     assert result["risk_level"] != "Low" or result["probability"] < 0.3
 
 
@@ -77,9 +70,10 @@ def failure_sample() -> dict:
 def test_predict_returns_0_or_1(normal_sample: dict) -> None:
     try:
         result = predict(normal_sample, threshold=0.5)
-        assert result["prediction"] in (0, 1), (
-            f"Prediction must be 0 or 1, got {result['prediction']}"
-        )
+        assert result["prediction"] in (
+            0,
+            1,
+        ), f"Prediction must be 0 or 1, got {result['prediction']}"
     except FileNotFoundError:
         pytest.skip("Model file not found; skipping prediction test")
 
@@ -87,9 +81,10 @@ def test_predict_returns_0_or_1(normal_sample: dict) -> None:
 def test_predict_returns_0_or_1_failure_sample(failure_sample: dict) -> None:
     try:
         result = predict(failure_sample, threshold=0.5)
-        assert result["prediction"] in (0, 1), (
-            f"Prediction must be 0 or 1, got {result['prediction']}"
-        )
+        assert result["prediction"] in (
+            0,
+            1,
+        ), f"Prediction must be 0 or 1, got {result['prediction']}"
     except FileNotFoundError:
         pytest.skip("Model file not found; skipping prediction test")
 
@@ -97,9 +92,9 @@ def test_predict_returns_0_or_1_failure_sample(failure_sample: dict) -> None:
 def test_predict_probability_range(normal_sample: dict) -> None:
     try:
         result = predict(normal_sample, threshold=0.5)
-        assert 0.0 <= result["probability"] <= 1.0, (
-            f"Probability must be in [0,1], got {result['probability']}"
-        )
+        assert (
+            0.0 <= result["probability"] <= 1.0
+        ), f"Probability must be in [0,1], got {result['probability']}"
     except FileNotFoundError:
         pytest.skip("Model file not found; skipping prediction test")
 
@@ -107,15 +102,18 @@ def test_predict_probability_range(normal_sample: dict) -> None:
 def test_predict_risk_level(normal_sample: dict) -> None:
     try:
         result = predict(normal_sample, threshold=0.5)
-        assert result["risk_level"] in ("Low", "Medium", "High"), (
-            f"Risk level must be Low/Medium/High, got {result['risk_level']}"
-        )
+        assert result["risk_level"] in (
+            "Low",
+            "Medium",
+            "High",
+        ), f"Risk level must be Low/Medium/High, got {result['risk_level']}"
     except FileNotFoundError:
         pytest.skip("Model file not found; skipping prediction test")
 
 
 def test_batch_predict_with_csv(tmp_path: "Path") -> None:
     import os
+
     df = pd.DataFrame(
         {
             "Air temperature [K]": [298.0, 315.0],

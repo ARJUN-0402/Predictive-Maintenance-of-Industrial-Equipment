@@ -141,9 +141,9 @@ class TestActiveStateLogic:
 
     def test_exactly_one_active_for_each_page(self) -> None:
         for page_id in VALID_PAGES:
-            assert self._active_count(page_id) == 1, (
-                f"Page {page_id!r} should match exactly one nav item"
-            )
+            assert (
+                self._active_count(page_id) == 1
+            ), f"Page {page_id!r} should match exactly one nav item"
 
     def test_default_page_has_exactly_one_active(self) -> None:
         assert self._active_count(DEFAULT_PAGE) == 1

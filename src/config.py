@@ -14,7 +14,8 @@ FIGURES_DIR = REPORTS_DIR / "figures"
 RESULTS_DIR = REPORTS_DIR / "results"
 
 DATASET_URL = (
-    "https://archive.ics.uci.edu/static/public/601/ai4i+2020+predictive+maintenance+dataset.zip"
+    "https://archive.ics.uci.edu/static/public/601/"
+    "ai4i+2020+predictive+maintenance+dataset.zip"
 )
 DATASET_FILENAME = "ai4i2020.csv"
 DATASET_ZIP = "ai4i2020.zip"

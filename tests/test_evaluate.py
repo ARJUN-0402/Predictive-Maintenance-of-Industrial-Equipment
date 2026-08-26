@@ -21,9 +21,7 @@ def mock_eval_data() -> dict:
     n_features = 13
     feature_names = [f"f{i}" for i in range(n_features)]
 
-    X_test = pd.DataFrame(
-        rng.standard_normal((n, n_features)), columns=feature_names
-    )
+    X_test = pd.DataFrame(rng.standard_normal((n, n_features)), columns=feature_names)
     y_test = pd.Series(rng.integers(0, 2, size=n), name="Machine failure")
 
     y_prob = rng.uniform(0.0, 1.0, size=n)
@@ -31,7 +29,12 @@ def mock_eval_data() -> dict:
 
     models = {
         name: _make_mock_model(y_pred, y_prob)
-        for name in ("xgboost", "random_forest", "gradient_boosting", "logistic_regression")
+        for name in (
+            "xgboost",
+            "random_forest",
+            "gradient_boosting",
+            "logistic_regression",
+        )
     }
 
     metrics = {
@@ -107,6 +110,7 @@ class TestThresholdOptimization:
 
     def test_optimize_threshold_returns_dict(self):
         import warnings
+
         warnings.filterwarnings("ignore")
         from src.threshold_optimization import optimize_threshold
 
@@ -127,7 +131,9 @@ class TestThresholdOptimization:
         y_true = pd.Series(rng.integers(0, 2, size=200))
         y_prob = rng.uniform(0.05, 0.95, size=200)
 
-        result = optimize_threshold(y_true, y_prob, threshold_range=(0.05, 0.95), step=0.05)
+        result = optimize_threshold(
+            y_true, y_prob, threshold_range=(0.05, 0.95), step=0.05
+        )
         assert "best_threshold" in result
         assert "best_f1" in result
         assert "best_precision" in result
@@ -146,6 +152,7 @@ class TestThresholdOptimization:
         assert data["recall"].between(0.0, 1.0).all()
 
         import warnings
+
         warnings.filterwarnings("ignore")
         from src.threshold_optimization import recommend_threshold_for_recall
 
