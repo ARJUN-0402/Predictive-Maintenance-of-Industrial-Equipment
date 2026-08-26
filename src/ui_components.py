@@ -8,6 +8,69 @@ import streamlit as st
 
 from src.ui_styles import DESIGN
 
+# ---------------------------------------------------------------------------
+# Navigation registry — single source of truth for page routing
+# ---------------------------------------------------------------------------
+# Each item is (sidebar_label, page_id, button_key). ``page_id`` is the value
+# stored in ``st.session_state.page`` and used to dispatch to the page render
+# function. ``button_key`` is the unique Streamlit key for the nav button.
+NAV_GROUPS: list[dict[str, list[tuple[str, str, str]]]] = [
+    {"label": "Overview", "items": [("Dashboard", "Home", "nav_dashboard")]},
+    {
+        "label": "Intelligence",
+        "items": [
+            ("Predict", "Predict Failure", "nav_predict"),
+            ("Explain", "Explain Prediction", "nav_explain"),
+        ],
+    },
+    {
+        "label": "Analytics",
+        "items": [
+            ("Dataset", "Dataset Overview", "nav_dataset"),
+            ("EDA", "Exploratory Data Analysis", "nav_eda"),
+        ],
+    },
+    {
+        "label": "Evaluation",
+        "items": [
+            ("Performance", "Performance Metrics", "nav_performance"),
+            ("Threshold", "Threshold Optimization", "nav_threshold"),
+        ],
+    },
+    {
+        "label": "Reporting",
+        "items": [
+            ("Reports", "Reports & Downloads", "nav_reports"),
+        ],
+    },
+    {
+        "label": "System",
+        "items": [
+            ("Model Info", "Model Information", "nav_model_info"),
+            ("Model Training", "Model Training", "nav_training"),
+        ],
+    },
+]
+
+DEFAULT_PAGE: str = "Home"
+
+VALID_PAGES: set[str] = {
+    page_id for group in NAV_GROUPS for _, page_id, _ in group["items"]
+}
+
+
+def navigate_to_page(page_id: str) -> None:
+    """Set the current page and trigger a rerun.
+
+    This is the only supported mechanism for changing pages. It updates the
+    single source of truth (``st.session_state.page``) and requests a rerun so
+    the new page renders immediately. Unknown page IDs are ignored so that
+    corrupted session state cannot route the app to a non-existent page.
+    """
+    if page_id in VALID_PAGES:
+        st.session_state["page"] = page_id
+        st.rerun()
+
 
 # ---------------------------------------------------------------------------
 # Core identity
@@ -248,24 +311,38 @@ def technical_metadata(items: Sequence[tuple[str, str]]) -> None:
 # ---------------------------------------------------------------------------
 # Sidebar nav rail
 # ---------------------------------------------------------------------------
-def nav_rail_item(label: str, page_key: str, active: bool = False, primary: bool = False) -> None:
+def nav_rail_item(
+    label: str,
+    page_id: str,
+    button_key: str,
+    active: bool = False,
+    primary: bool = False,
+) -> None:
+    """Render a single sidebar navigation item as a real Streamlit button.
+
+    The active page is shown as a disabled (highlighted) button. Inactive pages
+    are clickable and trigger navigation via :func:`navigate_to_page`, which
+    updates ``st.session_state.page`` and reruns the app.
+    """
     if active:
-        st.markdown(
-            f'<button class="sidebar-nav-item active" disabled>{label}</button>',
-            unsafe_allow_html=True,
+        st.button(
+            label,
+            key=button_key,
+            disabled=True,
+            use_container_width=True,
         )
         return
 
-    style = ' style="color:#00d4ff;font-weight:600;"' if primary else ""
-    st.markdown(
-        f"""
-        <button class="sidebar-nav-item"{style}
-            onclick="window.parent.postMessage({{'type':'streamlit:setPage','page':'{page_key}'}}, '*')">
-            {label}
-        </button>
-        """,
-        unsafe_allow_html=True,
-    )
+    if primary:
+        st.markdown(
+            '<div class="nav-rail-primary">', unsafe_allow_html=True
+        )
+
+    if st.button(label, key=button_key, use_container_width=True):
+        navigate_to_page(page_id)
+
+    if primary:
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
@@ -421,6 +498,10 @@ def render_prediction_card(result: dict, threshold: float) -> None:
 
 
 __all__ = [
+    "NAV_GROUPS",
+    "DEFAULT_PAGE",
+    "VALID_PAGES",
+    "navigate_to_page",
     "page_header",
     "section_header",
     "section_title",

@@ -263,6 +263,96 @@ html, body { margin: 0; padding: 0; }
     font-weight: 600;
 }
 
+/* === Streamlit buttons used as sidebar nav rail items ===
+   The nav rail is built from real Streamlit buttons (see nav_rail_item),
+   so the .sidebar-nav-item class is no longer present. These rules make
+   the sidebar buttons replicate the compact rail look: full width, left
+   accent border, muted idle color, cyan active state. */
+[data-testid="stSidebar"] .stButton > button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #8b949e;
+    background: none;
+    border: none;
+    border-left: 2px solid transparent;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin: 0;
+    line-height: 1.4;
+    box-shadow: none;
+    justify-content: flex-start;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    color: #e6edf3;
+    background-color: rgba(0,212,255,0.04);
+    border-left-color: transparent;
+    transform: none;
+    box-shadow: none;
+}
+[data-testid="stSidebar"] .stButton > button:active,
+[data-testid="stSidebar"] .stButton > button:focus {
+    color: #e6edf3;
+    background-color: rgba(0,212,255,0.04);
+    border-left-color: transparent;
+    box-shadow: none;
+    outline: none;
+}
+/* Active page -> disabled button styled as the cyan rail indicator */
+[data-testid="stSidebar"] .stButton > button:disabled,
+[data-testid="stSidebar"] .stButton > button[disabled] {
+    color: #00d4ff;
+    border-left-color: #00d4ff;
+    background-color: rgba(0,212,255,0.06);
+    font-weight: 600;
+    opacity: 1;
+    cursor: default;
+    pointer-events: none;
+}
+/* Predict (primary) idle accent when not active */
+[data-testid="stSidebar"] .nav-rail-primary .stButton > button {
+    color: #00d4ff;
+    font-weight: 600;
+}
+
+/* === Model Information status hero === */
+.model-status-hero {
+    display: flex;
+    gap: 2.5rem;
+    padding: 1.5rem 0;
+    border-bottom: 1px solid #21262d;
+    margin-bottom: 1.5rem;
+}
+.model-status-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+.model-status-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #484f58;
+}
+.model-status-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #e6edf3;
+    font-family: SFMono-Regular, Consolas, monospace;
+}
+.model-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.4rem;
+}
+
 /* === Hero / Command Center === */
 .command-hero {
     padding: 2rem 0;

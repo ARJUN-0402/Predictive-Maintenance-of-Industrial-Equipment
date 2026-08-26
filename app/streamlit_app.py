@@ -34,6 +34,8 @@ from src.predict import batch_predict, predict
 from src.preprocessing import load_processed_data
 from src.train import train_all_models
 from src.ui_components import (
+    DEFAULT_PAGE,
+    NAV_GROUPS,
     command_hero,
     feature_contribution_bars,
     metric_editorial_row,
@@ -218,48 +220,7 @@ def _display_prediction_card(result: dict, threshold: float) -> None:
 # Sidebar navigation rail
 # ---------------------------------------------------------------------------
 def _render_sidebar() -> None:
-    current_page = st.session_state.get("page", "Home")
-
-    nav_groups = [
-        {
-            "label": "Overview",
-            "items": [("Dashboard", "Home")],
-        },
-        {
-            "label": "Intelligence",
-            "items": [
-                ("Predict", "Predict Failure"),
-                ("Explain", "Explain Prediction"),
-            ],
-        },
-        {
-            "label": "Analytics",
-            "items": [
-                ("Dataset", "Dataset Overview"),
-                ("EDA", "Exploratory Data Analysis"),
-            ],
-        },
-        {
-            "label": "Evaluation",
-            "items": [
-                ("Performance", "Performance Metrics"),
-                ("Threshold", "Threshold Optimization"),
-            ],
-        },
-        {
-            "label": "Reporting",
-            "items": [
-                ("Reports", "Reports & Downloads"),
-            ],
-        },
-        {
-            "label": "System",
-            "items": [
-                ("Model Info", "Model Information"),
-                ("Model Training", "Model Training"),
-            ],
-        },
-    ]
+    current_page = st.session_state.get("page", DEFAULT_PAGE)
 
     with st.sidebar:
         st.markdown(
@@ -281,12 +242,12 @@ def _render_sidebar() -> None:
                 unsafe_allow_html=True,
             )
 
-        for group in nav_groups:
+        for group in NAV_GROUPS:
             st.markdown(f'<div class="sidebar-section-title">{group["label"]}</div>', unsafe_allow_html=True)
-            for label, page_key in group["items"]:
-                active = current_page == page_key
-                primary = label == "Predict"
-                nav_rail_item(label, page_key, active=active, primary=primary)
+            for label, page_id, button_key in group["items"]:
+                active = current_page == page_id
+                primary = page_id == "Predict Failure"
+                nav_rail_item(label, page_id, button_key, active=active, primary=primary)
 
         st.markdown("<hr>", unsafe_allow_html=True)
 
@@ -1151,7 +1112,32 @@ def page_model_information() -> None:
         latest_xgb = _latest_version_key(xgb_versions)
         model_version = xgb_versions[latest_xgb].get("version", "1.0")
 
-    status = "Loaded" if artifacts_exist() else "Not Loaded"
+    artifacts_loaded = artifacts_exist()
+    status_label = "Loaded" if artifacts_loaded else "Not Loaded"
+    status_color = "#00c853" if artifacts_loaded else "#ffab00"
+
+    st.markdown(
+        f"""
+        <div class="model-status-hero">
+            <div class="model-status-cell">
+                <span class="model-status-label">Model</span>
+                <span class="model-status-value">XGBoost</span>
+            </div>
+            <div class="model-status-cell">
+                <span class="model-status-label">Status</span>
+                <span class="model-status-value" style="color:{status_color};">
+                    <span class="model-status-dot" style="background-color:{status_color};"></span>
+                    {status_label}
+                </span>
+            </div>
+            <div class="model-status-cell">
+                <span class="model-status-label">Version</span>
+                <span class="model-status-value">v{model_version}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     features = feature_config.get("features", [])
     if not features:
@@ -1166,8 +1152,8 @@ def page_model_information() -> None:
         technical_metadata(
             [
                 ("Algorithm", "XGBoost"),
-                ("Status", status),
-                ("Version", model_version),
+                ("Status", status_label),
+                ("Version", f"v{model_version}"),
                 ("Inference Engine", "XGBoost"),
             ]
         )
@@ -1395,6 +1381,26 @@ def page_performance_metrics() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Page dispatch table
+# ---------------------------------------------------------------------------
+# Maps the page id (the single source of truth stored in st.session_state.page)
+# to the render function. This is the only place that resolves a page id to a
+# page, so the sidebar and the rendered content can never diverge.
+PAGES: dict[str, callable] = {
+    "Home": page_home,
+    "Predict Failure": page_predict_failure,
+    "Explain Prediction": page_explain_prediction,
+    "Dataset Overview": page_dataset_overview,
+    "Exploratory Data Analysis": page_eda,
+    "Performance Metrics": page_performance_metrics,
+    "Threshold Optimization": page_threshold_optimization,
+    "Reports & Downloads": page_download_reports,
+    "Model Information": page_model_information,
+    "Model Training": page_train_model,
+}
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 def main() -> None:
@@ -1408,28 +1414,9 @@ def main() -> None:
     _init_session_state()
     _render_sidebar()
 
-    page = st.session_state.get("page", "Home")
-
-    if page == "Home":
-        page_home()
-    elif page == "Dataset Overview":
-        page_dataset_overview()
-    elif page == "Exploratory Data Analysis":
-        page_eda()
-    elif page == "Model Training":
-        page_train_model()
-    elif page == "Predict Failure":
-        page_predict_failure()
-    elif page == "Explain Prediction":
-        page_explain_prediction()
-    elif page == "Performance Metrics":
-        page_performance_metrics()
-    elif page == "Threshold Optimization":
-        page_threshold_optimization()
-    elif page == "Reports & Downloads":
-        page_download_reports()
-    elif page == "Model Information":
-        page_model_information()
+    current_page = st.session_state.get("page", DEFAULT_PAGE)
+    page_func = PAGES.get(current_page, page_home)
+    page_func()
 
 
 if __name__ == "__main__":
