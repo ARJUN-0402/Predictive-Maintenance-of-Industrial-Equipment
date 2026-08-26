@@ -82,7 +82,15 @@ def render_html(html: str) -> None:
     ``st.markdown`` or ``st.write`` directly. This guarantees that trusted
     markup is rendered with the correct Streamlit API and prevents raw HTML
     from accidentally being displayed as plain text.
+
+    Raises ``TypeError`` if ``html`` is not a ``str`` so that contract
+    violations are caught immediately instead of falling through to Streamlit's
+    plain-text renderer.
     """
+    if not isinstance(html, str):
+        raise TypeError(
+            f"render_html expected str, got {type(html).__name__}: {html!r}"
+        )
     st.markdown(html, unsafe_allow_html=True)
 
 
@@ -109,6 +117,7 @@ def page_header(title: str, subtitle: str) -> None:
         </div>
         """,
     )
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -116,10 +125,12 @@ def page_header(title: str, subtitle: str) -> None:
 # ---------------------------------------------------------------------------
 def section_header(title: str) -> None:
     render_html(f'<div class="section-label">{title}</div>')
+    return None
 
 
 def section_title(title: str) -> None:
     render_html(f'<div class="section-title">{title}</div>')
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -128,6 +139,7 @@ def section_title(title: str) -> None:
 def metric_mega(value: str, unit: str = "") -> None:
     unit_html = f'<span style="font-size:0.4em;font-weight:600;color:#8b949e;margin-left:0.25rem;">{unit}</span>' if unit else ""
     render_html(f'<div class="metric-mega">{value}{unit_html}</div>')
+    return None
 
 
 def metric_large(value: str, color: str | None = None) -> None:
@@ -135,11 +147,12 @@ def metric_large(value: str, color: str | None = None) -> None:
     render_html(
         f'<div class="metric-large" style="color:{c};">{value}</div>',
     )
+    return None
 
 
 def metric_editorial_row(metrics: Sequence[tuple[str, str, str | None]]) -> None:
     if not metrics:
-        return
+        return None
     cells = []
     for label, value, color in metrics:
         c = color or DESIGN["text_primary"]
@@ -152,6 +165,7 @@ def metric_editorial_row(metrics: Sequence[tuple[str, str, str | None]]) -> None
             """
         )
     render_html(f'<div class="metric-editorial-row">{"".join(cells)}</div>')
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +187,7 @@ def status_indicator(status: str = "ready", label: str = "") -> None:
         </span>
         """,
     )
+    return None
 
 
 def risk_badge(risk: str) -> None:
@@ -190,6 +205,7 @@ def risk_badge(risk: str) -> None:
         </span>
         """,
     )
+    return None
 
 
 def risk_scale(probability: float, threshold: float = 0.5) -> None:
@@ -209,6 +225,7 @@ def risk_scale(probability: float, threshold: float = 0.5) -> None:
         </div>
         """,
     )
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -232,6 +249,7 @@ def telemetry_row(items: Sequence[tuple[str, str, str, str]]) -> None:
             """
         )
     render_html(f'<div class="telemetry-grid">{"".join(cells)}</div>')
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -264,6 +282,7 @@ def prediction_panel(result: dict, threshold: float) -> None:
         </div>
         """,
     )
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -294,6 +313,7 @@ def feature_contribution_bars(
             """
         )
     render_html("".join(rows))
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -311,6 +331,7 @@ def technical_metadata(items: Sequence[tuple[str, str]]) -> None:
             """
         )
     render_html(f'<div class="meta-strip">{"".join(cells)}</div>')
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -336,7 +357,7 @@ def nav_rail_item(
             disabled=True,
             use_container_width=True,
         )
-        return
+        return None
 
     if primary:
         render_html('<div class="nav-rail-primary">')
@@ -346,6 +367,7 @@ def nav_rail_item(
 
     if primary:
         render_html("</div>")
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -355,6 +377,7 @@ def system_alert(message: str, level: str = "error") -> None:
     render_html(
         f'<div class="system-alert {level}">{message}</div>',
     )
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -376,6 +399,7 @@ def command_hero(title: str, subtitle: str, right_content: str = "") -> None:
         </div>
         """,
     )
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -390,6 +414,7 @@ def instrument_input(label: str, widget_html: str) -> None:
         </div>
         """,
     )
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -407,6 +432,7 @@ def report_row(title: str, meta: str, download_fn) -> None:
         """,
     )
     download_fn()
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -414,10 +440,12 @@ def report_row(title: str, meta: str, download_fn) -> None:
 # ---------------------------------------------------------------------------
 def render_page_header(title: str, subtitle: str | None = None) -> None:
     page_header(title, subtitle or "")
+    return None
 
 
 def render_section_header(title: str) -> None:
     section_header(title)
+    return None
 
 
 def render_metric_card(title: str, value: str, color: str | None = None) -> None:
@@ -430,6 +458,7 @@ def render_metric_card(title: str, value: str, color: str | None = None) -> None
         </div>
         """,
     )
+    return None
 
 
 def render_metric_row(
@@ -442,6 +471,7 @@ def render_metric_row(
         for col, (title, value, color) in zip(cols, chunk):
             with col:
                 render_metric_card(title, value, color)
+    return None
 
 
 def render_status_dot(status: str = "ready") -> str:
@@ -468,6 +498,7 @@ def render_info_card(title: str, content: str) -> None:
         </div>
         """,
     )
+    return None
 
 
 def render_action_card(title: str, content: str) -> None:
@@ -479,6 +510,7 @@ def render_action_card(title: str, content: str) -> None:
         </div>
         """,
     )
+    return None
 
 
 def render_highlight(text: str) -> None:
@@ -486,10 +518,12 @@ def render_highlight(text: str) -> None:
         f"<div style='display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;"
         f"font-size:0.85rem;color:#e6edf3;'><span style='color:#00c853;font-weight:700;'>✓</span>{text}</div>",
     )
+    return None
 
 
 def render_prediction_card(result: dict, threshold: float) -> None:
     prediction_panel(result, threshold)
+    return None
 
 
 __all__ = [

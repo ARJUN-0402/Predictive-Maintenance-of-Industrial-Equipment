@@ -72,7 +72,7 @@ def validate_data_types(df: pd.DataFrame) -> None:
         if col not in df.columns:
             continue
         actual_type = df[col].dtype
-        if expected_type == int:
+        if expected_type is int:
             if not pd.api.types.is_integer_dtype(actual_type):
                 try:
                     pd.to_numeric(df[col], errors="raise")
@@ -80,7 +80,7 @@ def validate_data_types(df: pd.DataFrame) -> None:
                     raise ValidationError(
                         f"Column '{col}' expected to be integer, got {actual_type}"
                     )
-        elif expected_type == float:
+        elif expected_type is float:
             if not pd.api.types.is_float_dtype(actual_type):
                 try:
                     pd.to_numeric(df[col], errors="raise")
