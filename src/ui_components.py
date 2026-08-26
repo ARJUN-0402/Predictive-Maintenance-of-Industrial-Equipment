@@ -75,8 +75,19 @@ def navigate_to_page(page_id: str) -> None:
 # ---------------------------------------------------------------------------
 # Core identity
 # ---------------------------------------------------------------------------
+def render_html(html: str) -> None:
+    """Render trusted application HTML through the centralized renderer.
+
+    All static UI components must use this helper instead of calling
+    ``st.markdown`` or ``st.write`` directly. This guarantees that trusted
+    markup is rendered with the correct Streamlit API and prevents raw HTML
+    from accidentally being displayed as plain text.
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
+
 def page_header(title: str, subtitle: str) -> None:
-    st.markdown(
+    render_html(
         f"""
         <div class="page-identity">
             <div class="page-identity-left">
@@ -97,7 +108,6 @@ def page_header(title: str, subtitle: str) -> None:
             </div>
         </div>
         """,
-        unsafe_allow_html=True,
     )
 
 
@@ -105,11 +115,11 @@ def page_header(title: str, subtitle: str) -> None:
 # Section headers
 # ---------------------------------------------------------------------------
 def section_header(title: str) -> None:
-    st.markdown(f'<div class="section-label">{title}</div>', unsafe_allow_html=True)
+    render_html(f'<div class="section-label">{title}</div>')
 
 
 def section_title(title: str) -> None:
-    st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
+    render_html(f'<div class="section-title">{title}</div>')
 
 
 # ---------------------------------------------------------------------------
@@ -117,14 +127,13 @@ def section_title(title: str) -> None:
 # ---------------------------------------------------------------------------
 def metric_mega(value: str, unit: str = "") -> None:
     unit_html = f'<span style="font-size:0.4em;font-weight:600;color:#8b949e;margin-left:0.25rem;">{unit}</span>' if unit else ""
-    st.markdown(f'<div class="metric-mega">{value}{unit_html}</div>', unsafe_allow_html=True)
+    render_html(f'<div class="metric-mega">{value}{unit_html}</div>')
 
 
 def metric_large(value: str, color: str | None = None) -> None:
     c = color or DESIGN["text_primary"]
-    st.markdown(
+    render_html(
         f'<div class="metric-large" style="color:{c};">{value}</div>',
-        unsafe_allow_html=True,
     )
 
 
@@ -142,7 +151,7 @@ def metric_editorial_row(metrics: Sequence[tuple[str, str, str | None]]) -> None
             </div>
             """
         )
-    st.markdown(f'<div class="metric-editorial-row">{"".join(cells)}</div>', unsafe_allow_html=True)
+    render_html(f'<div class="metric-editorial-row">{"".join(cells)}</div>')
 
 
 # ---------------------------------------------------------------------------
@@ -156,14 +165,13 @@ def status_indicator(status: str = "ready", label: str = "") -> None:
     }.get(status, DESIGN["text_muted"])
 
     label_html = f'<span style="margin-left:0.4rem;font-size:0.75rem;font-weight:600;color:#e6edf3;">{label}</span>' if label else ""
-    st.markdown(
+    render_html(
         f"""
         <span style="display:inline-flex;align-items:center;gap:0.4rem;">
             <span style="width:6px;height:6px;border-radius:50%;background-color:{color};"></span>
             {label_html}
         </span>
         """,
-        unsafe_allow_html=True,
     )
 
 
@@ -173,7 +181,7 @@ def risk_badge(risk: str) -> None:
         "MEDIUM": DESIGN["warning"],
         "HIGH": DESIGN["error"],
     }.get(risk.upper(), DESIGN["text_secondary"])
-    st.markdown(
+    render_html(
         f"""
         <span style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.25rem 0.6rem;
         background-color:{color}15;border:1px solid {color}30;border-radius:3px;
@@ -181,14 +189,13 @@ def risk_badge(risk: str) -> None:
             {risk.upper()}
         </span>
         """,
-        unsafe_allow_html=True,
     )
 
 
 def risk_scale(probability: float, threshold: float = 0.5) -> None:
     pct = max(0.0, min(1.0, probability))
     marker_left = pct * 100
-    st.markdown(
+    render_html(
         f"""
         <div style="position:relative;padding:0.5rem 0 1.5rem 0;">
             <div class="risk-scale">
@@ -201,7 +208,6 @@ def risk_scale(probability: float, threshold: float = 0.5) -> None:
             </div>
         </div>
         """,
-        unsafe_allow_html=True,
     )
 
 
@@ -225,7 +231,7 @@ def telemetry_row(items: Sequence[tuple[str, str, str, str]]) -> None:
             </div>
             """
         )
-    st.markdown(f'<div class="telemetry-grid">{"".join(cells)}</div>', unsafe_allow_html=True)
+    render_html(f'<div class="telemetry-grid">{"".join(cells)}</div>')
 
 
 # ---------------------------------------------------------------------------
@@ -248,7 +254,7 @@ def prediction_panel(result: dict, threshold: float) -> None:
         "Continue monitoring according to the normal maintenance schedule."
     )
 
-    st.markdown(
+    render_html(
         f"""
         <div class="prediction-panel">
             <div class="prediction-value" style="color:{color};">{pct}</div>
@@ -257,7 +263,6 @@ def prediction_panel(result: dict, threshold: float) -> None:
             <div class="prediction-decision">{decision}</div>
         </div>
         """,
-        unsafe_allow_html=True,
     )
 
 
@@ -288,7 +293,7 @@ def feature_contribution_bars(
             </div>
             """
         )
-    st.markdown("".join(rows), unsafe_allow_html=True)
+    render_html("".join(rows))
 
 
 # ---------------------------------------------------------------------------
@@ -305,7 +310,7 @@ def technical_metadata(items: Sequence[tuple[str, str]]) -> None:
             </div>
             """
         )
-    st.markdown(f'<div class="meta-strip">{"".join(cells)}</div>', unsafe_allow_html=True)
+    render_html(f'<div class="meta-strip">{"".join(cells)}</div>')
 
 
 # ---------------------------------------------------------------------------
@@ -334,24 +339,21 @@ def nav_rail_item(
         return
 
     if primary:
-        st.markdown(
-            '<div class="nav-rail-primary">', unsafe_allow_html=True
-        )
+        render_html('<div class="nav-rail-primary">')
 
     if st.button(label, key=button_key, use_container_width=True):
         navigate_to_page(page_id)
 
     if primary:
-        st.markdown("</div>", unsafe_allow_html=True)
+        render_html("</div>")
 
 
 # ---------------------------------------------------------------------------
 # Compact alerts
 # ---------------------------------------------------------------------------
 def system_alert(message: str, level: str = "error") -> None:
-    st.markdown(
+    render_html(
         f'<div class="system-alert {level}">{message}</div>',
-        unsafe_allow_html=True,
     )
 
 
@@ -359,7 +361,7 @@ def system_alert(message: str, level: str = "error") -> None:
 # Command hero
 # ---------------------------------------------------------------------------
 def command_hero(title: str, subtitle: str, right_content: str = "") -> None:
-    st.markdown(
+    render_html(
         f"""
         <div class="command-hero">
             <div class="command-hero-grid">
@@ -373,7 +375,6 @@ def command_hero(title: str, subtitle: str, right_content: str = "") -> None:
             </div>
         </div>
         """,
-        unsafe_allow_html=True,
     )
 
 
@@ -381,14 +382,13 @@ def command_hero(title: str, subtitle: str, right_content: str = "") -> None:
 # Instrumentation inputs
 # ---------------------------------------------------------------------------
 def instrument_input(label: str, widget_html: str) -> None:
-    st.markdown(
+    render_html(
         f"""
         <div class="instrument-item">
             <span class="instrument-name">{label}</span>
             {widget_html}
         </div>
         """,
-        unsafe_allow_html=True,
     )
 
 
@@ -396,7 +396,7 @@ def instrument_input(label: str, widget_html: str) -> None:
 # Report center
 # ---------------------------------------------------------------------------
 def report_row(title: str, meta: str, download_fn) -> None:
-    st.markdown(
+    render_html(
         f"""
         <div class="report-item">
             <div>
@@ -405,7 +405,6 @@ def report_row(title: str, meta: str, download_fn) -> None:
             </div>
         </div>
         """,
-        unsafe_allow_html=True,
     )
     download_fn()
 
@@ -423,14 +422,13 @@ def render_section_header(title: str) -> None:
 
 def render_metric_card(title: str, value: str, color: str | None = None) -> None:
     c = color or DESIGN["text_primary"]
-    st.markdown(
+    render_html(
         f"""
         <div style="padding:1rem 0;border-bottom:1px solid #21262d;">
             <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#484f58;margin-bottom:0.35rem;">{title}</div>
             <div style="font-size:1.5rem;font-weight:800;color:{c};letter-spacing:-0.02em;">{value}</div>
         </div>
         """,
-        unsafe_allow_html=True,
     )
 
 
@@ -462,34 +460,31 @@ def card_html(title: str, value: str, color: str) -> str:
 
 
 def render_info_card(title: str, content: str) -> None:
-    st.markdown(
+    render_html(
         f"""
         <div style="padding:0.75rem 0;border-bottom:1px solid #161c24;">
             <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#00d4ff;margin-bottom:0.35rem;">{title}</div>
             <div style="font-size:0.8rem;color:#8b949e;line-height:1.5;">{content}</div>
         </div>
         """,
-        unsafe_allow_html=True,
     )
 
 
 def render_action_card(title: str, content: str) -> None:
-    st.markdown(
+    render_html(
         f"""
         <div style="padding:0.75rem 0;border-bottom:1px solid #161c24;">
             <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#00d4ff;margin-bottom:0.35rem;">{title}</div>
             <div style="font-size:0.8rem;color:#8b949e;line-height:1.5;">{content}</div>
         </div>
         """,
-        unsafe_allow_html=True,
     )
 
 
 def render_highlight(text: str) -> None:
-    st.markdown(
+    render_html(
         f"<div style='display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;"
         f"font-size:0.85rem;color:#e6edf3;'><span style='color:#00c853;font-weight:700;'>✓</span>{text}</div>",
-        unsafe_allow_html=True,
     )
 
 

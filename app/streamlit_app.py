@@ -42,6 +42,7 @@ from src.ui_components import (
     nav_rail_item,
     page_header,
     prediction_panel,
+    render_html,
     risk_scale,
     section_header,
     section_title,
@@ -168,7 +169,7 @@ def _display_prediction_card(result: dict, threshold: float) -> None:
     label = "FAILURE" if pred == 1 else "NORMAL"
     color = "#ff4b4b" if pred == 1 else "#00c853"
 
-    st.markdown(
+    render_html(
         f"""
         <div class="prediction-card" style="border-left-color:{color};">
             <div class="prob" style="color:{color};">{prob * 100:.1f}%</div>
@@ -177,7 +178,6 @@ def _display_prediction_card(result: dict, threshold: float) -> None:
                 Threshold: {threshold:.2f}</div>
         </div>
         """,
-        unsafe_allow_html=True,
     )
 
     st.progress(prob, text=format_probability(prob))
@@ -187,7 +187,7 @@ def _display_prediction_card(result: dict, threshold: float) -> None:
             f"Model indicates elevated failure risk ({prob * 100:.1f}%) "
             f"above the decision threshold ({threshold:.2f})."
         )
-        st.markdown(
+        render_html(
             """
             <div class="action-box">
                 <div class="title">Recommended Action</div>
@@ -196,14 +196,13 @@ def _display_prediction_card(result: dict, threshold: float) -> None:
                 guarantee of failure.</div>
             </div>
             """,
-            unsafe_allow_html=True,
         )
     else:
         st.info(
             f"Model indicates normal operation ({prob * 100:.1f}%) "
             f"below the decision threshold ({threshold:.2f})."
         )
-        st.markdown(
+        render_html(
             """
             <div class="action-box">
                 <div class="title">Recommended Action</div>
@@ -212,7 +211,6 @@ def _display_prediction_card(result: dict, threshold: float) -> None:
                 guarantee of continued operation.</div>
             </div>
             """,
-            unsafe_allow_html=True,
         )
 
 
@@ -223,40 +221,38 @@ def _render_sidebar() -> None:
     current_page = st.session_state.get("page", DEFAULT_PAGE)
 
     with st.sidebar:
-        st.markdown(
+        render_html(
             """
             <div class="sidebar-identity">
                 <p class="sidebar-brand">Predictive<br>Maintenance AI</p>
                 <span class="sidebar-sub">Industrial Equipment Intelligence</span>
             </div>
             """,
-            unsafe_allow_html=True,
         )
 
         model_loaded = artifacts_exist()
         if model_loaded:
-            st.markdown('<div class="sidebar-status">● SYSTEM ONLINE</div>', unsafe_allow_html=True)
+            render_html('<div class="sidebar-status">● SYSTEM ONLINE</div>')
         else:
-            st.markdown(
+            render_html(
                 '<div class="sidebar-status" style="color:#ffab00;">● SETUP REQUIRED</div>',
-                unsafe_allow_html=True,
             )
 
         for group in NAV_GROUPS:
-            st.markdown(f'<div class="sidebar-section-title">{group["label"]}</div>', unsafe_allow_html=True)
+            render_html(f'<div class="sidebar-section-title">{group["label"]}</div>')
             for label, page_id, button_key in group["items"]:
                 active = current_page == page_id
                 primary = page_id == "Predict Failure"
                 nav_rail_item(label, page_id, button_key, active=active, primary=primary)
 
-        st.markdown("<hr>", unsafe_allow_html=True)
+        render_html("<hr>")
 
         registry = load_registry_resource()
         versions = registry.get("versions", {})
         xgb_versions = {k: v for k, v in versions.items() if v.get("model") == "xgboost"}
 
         if xgb_versions:
-            st.markdown(
+            render_html(
                 """
                 <div style="padding:0 1rem;font-size:0.65rem;color:#484f58;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem;">
                     Model
@@ -271,7 +267,6 @@ def _render_sidebar() -> None:
                     SHAP + LIME
                 </div>
                 """,
-                unsafe_allow_html=True,
             )
 
 
@@ -308,7 +303,7 @@ def page_home() -> None:
 
     col_health, col_risk = st.columns([1, 1], gap="large")
     with col_health:
-        st.markdown(
+        render_html(
             """
             <div class="prediction-panel" style="border-left:3px solid #00d4ff;">
                 <div class="metric-mega" style="color:#00d4ff;">98.7%</div>
@@ -316,10 +311,9 @@ def page_home() -> None:
                 <div class="command-risk-badge">● Optimal Condition</div>
             </div>
             """,
-            unsafe_allow_html=True,
         )
     with col_risk:
-        st.markdown(
+        render_html(
             """
             <div class="prediction-panel" style="border-left:3px solid #00d4ff;">
                 <div class="metric-mega" style="font-size:clamp(2.5rem,5vw,4rem);color:#e6edf3;">0.1%</div>
@@ -328,7 +322,6 @@ def page_home() -> None:
                 <div class="prediction-meta" style="margin-top:0.75rem;">Threshold 0.50</div>
             </div>
             """,
-            unsafe_allow_html=True,
         )
 
     section_title("Operating Telemetry")
@@ -342,7 +335,7 @@ def page_home() -> None:
         ]
     )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    render_html("<br>")
     section_title("Model Performance")
     metric_editorial_row(
         [
@@ -506,7 +499,7 @@ def page_eda() -> None:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
+        render_html("<br>")
         c1, c2 = st.columns(2)
         with c1:
             fig = px.box(
@@ -629,11 +622,10 @@ def page_predict_failure() -> None:
             "sensitivity; higher values reduce false alarms."
         ),
     )
-    st.markdown(
+    render_html(
         f"<div style='font-size:0.75rem;color:#8b949e;margin-top:0.25rem;'>"
         f"Current: <span style='color:#00d4ff;font-weight:700;'>{threshold:.2f}</span> — "
         f"{'More sensitive' if threshold < 0.5 else 'Less sensitive'}</div>",
-        unsafe_allow_html=True,
     )
 
     tab_a, tab_b = st.tabs(["Manual Input", "Batch CSV Upload"])
@@ -674,13 +666,12 @@ def page_predict_failure() -> None:
         ]
         for col, (lbl, val, unit) in zip([f1, f2, f3, f4, f5], features):
             with col:
-                st.markdown(
+                render_html(
                     f"<div style='font-size:0.65rem;color:#484f58;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.15rem;'>{lbl}</div>"
                     f"<div style='font-size:1rem;font-weight:700;color:#e6edf3;font-family:SFMono-Regular,Consolas,monospace;'>{val} <span style='font-size:0.7rem;color:#8b949e;'>{unit}</span></div>",
-                    unsafe_allow_html=True,
                 )
 
-        st.markdown("<br>", unsafe_allow_html=True)
+        render_html("<br>")
         if st.button("Analyze Machine →", type="primary", use_container_width=False):
             input_dict = {
                 "Air temperature [K]": air_temp,
@@ -699,7 +690,7 @@ def page_predict_failure() -> None:
                 return
 
             try:
-                st.markdown("<br>", unsafe_allow_html=True)
+                render_html("<br>")
                 section_title("Prediction Result")
                 prediction_panel(result, threshold)
                 risk_scale(result["probability"], threshold)
@@ -823,7 +814,7 @@ def page_explain_prediction() -> None:
         section_title("Model Decision")
         col_pred, col_info = st.columns([1, 1], gap="large")
         with col_pred:
-            st.markdown(
+            render_html(
                 f"""
                 <div class="prediction-panel" style="border-left:3px solid {color};">
                     <div class="metric-large" style="color:{color};margin-bottom:0.25rem;">{prob * 100:.1f}%</div>
@@ -831,10 +822,9 @@ def page_explain_prediction() -> None:
                     <div class="prediction-meta">Risk: {risk}</div>
                 </div>
                 """,
-                unsafe_allow_html=True,
             )
         with col_info:
-            st.markdown(
+            render_html(
                 f"""
                 <div style="padding:1rem 0;">
                     <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#484f58;margin-bottom:0.35rem;">Threshold</div>
@@ -842,7 +832,6 @@ def page_explain_prediction() -> None:
                     <div style="font-size:0.75rem;color:#8b949e;margin-top:0.75rem;">Sample index: {idx}</div>
                 </div>
                 """,
-                unsafe_allow_html=True,
             )
 
         section_title("Why did the model decide this?")
@@ -992,7 +981,7 @@ def page_download_reports() -> None:
                     use_container_width=True,
                 )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    render_html("<br>")
     section_title("Model Artifacts")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -1026,7 +1015,7 @@ def page_download_reports() -> None:
                     use_container_width=True,
                 )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    render_html("<br>")
     section_title("Additional Artifacts")
     col1, col2 = st.columns(2)
     with col1:
@@ -1051,7 +1040,7 @@ def page_download_reports() -> None:
                     use_container_width=True,
                 )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    render_html("<br>")
     section_title("PDF Report")
     if st.button("Generate PDF Report", type="primary", use_container_width=True):
         try:
@@ -1116,7 +1105,7 @@ def page_model_information() -> None:
     status_label = "Loaded" if artifacts_loaded else "Not Loaded"
     status_color = "#00c853" if artifacts_loaded else "#ffab00"
 
-    st.markdown(
+    render_html(
         f"""
         <div class="model-status-hero">
             <div class="model-status-cell">
@@ -1136,7 +1125,6 @@ def page_model_information() -> None:
             </div>
         </div>
         """,
-        unsafe_allow_html=True,
     )
 
     features = feature_config.get("features", [])
@@ -1169,14 +1157,13 @@ def page_model_information() -> None:
             ]
         )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    render_html("<br>")
     section_title("Feature Configuration")
     feat_text = ", ".join(str(f) for f in features[:10])
     if len(features) > 10:
         feat_text += f" (+{len(features) - 10} more)"
-    st.markdown(
+    render_html(
         f"<div style='font-size:0.85rem;color:#8b949e;'>{feat_text}</div>",
-        unsafe_allow_html=True,
     )
 
 
@@ -1252,7 +1239,7 @@ def page_threshold_optimization() -> None:
 
     col_low, col_high = st.columns(2)
     with col_low:
-        st.markdown(
+        render_html(
             """
             <div class="prediction-panel" style="border-left:3px solid #ffab00;">
                 <div class="prediction-label" style="color:#ffab00;margin-bottom:0.5rem;">Lower Threshold</div>
@@ -1263,10 +1250,9 @@ def page_threshold_optimization() -> None:
                 </div>
             </div>
             """,
-            unsafe_allow_html=True,
         )
     with col_high:
-        st.markdown(
+        render_html(
             """
             <div class="prediction-panel" style="border-left:3px solid #00d4ff;">
                 <div class="prediction-label" style="color:#00d4ff;margin-bottom:0.5rem;">Higher Threshold</div>
@@ -1277,7 +1263,6 @@ def page_threshold_optimization() -> None:
                 </div>
             </div>
             """,
-            unsafe_allow_html=True,
         )
 
 
@@ -1409,7 +1394,7 @@ def main() -> None:
         layout="wide",
         page_icon=":gear:",
     )
-    st.markdown(CSS, unsafe_allow_html=True)
+    render_html(CSS)
 
     _init_session_state()
     _render_sidebar()
